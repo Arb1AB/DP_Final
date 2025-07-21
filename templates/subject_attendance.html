@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Attendance - {{ subject }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="attendance-page">
+    <header>
+        <h1>Attendance for "{{ subject }}"</h1>
+        <p>User: {{ user.name }} ({{ user.email }})</p>
+        <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+    </header>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Topic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Attendance data will go here -->
+        </tbody>
+    </table>
+</body>
+</html>
