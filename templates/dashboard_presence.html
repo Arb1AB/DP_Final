@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Presence - DPFinal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>DPFinal</h2>
+            <button class="close-btn" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('dashboard_courses') }}" class="nav-item">
+                            <span class="nav-icon">📚</span>
+                            <span class="nav-text">Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('dashboard_presence') }}" class="nav-item active">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Presence</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <p><strong>{{ user.name }}</strong></p>
+                <p class="user-email">{{ user.email }}</p>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-content">
+        <header class="top-header">
+            <button class="menu-btn" id="menuBtn">
+                <span></span><span></span><span></span>
+            </button>
+            <h1>Presence</h1>
+        </header>
+
+        <div class="content-area">
+            <!-- Presence Content -->
+            <section id="presence-section" class="content-section active">
+                <div class="section-header">
+                    <h2>📊 Presence</h2>
+                </div>
+
+                <div id="presenceContent">
+                    <p>Select a course and click "Check" on the Courses page to view attendance data here.</p>
+
+                    <!-- Attendance Records Display -->
+                    {% if courses %}
+                    <ul>
+                        {% for course in courses %}
+                            <li>
+                                <strong>{{ course.name }}</strong>
+                                <ul>
+                                    {% if attendance[course.id] %}
+                                        {% for checkin_time in attendance[course.id] %}
+                                            <li>Checked in: {{ checkin_time }}</li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li>No attendance records yet.</li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p>No courses available.</p>
+                    {% endif %}
+
+                    <h3>Generate QR Code for Attendance</h3>
+
+<form id="qrForm">
+    <label for="courseSelect">Select Course:</label>
+    <select id="courseSelect" name="course_id">
+        {% for course in courses %}
+        <option value="{{ course.id }}">{{ course.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="masterKey">Enter Master Key:</label>
+    <input type="password" id="masterKey" name="master_key" required />
+
+    <button type="submit">Generate QR</button>
+</form>
+
+
+                    <div id="qrCodeContainer" style="margin-top: 20px;">
+                        <img id="qrCodeImage" src="" alt="QR Code" style="display:none; max-width: 300px;" />
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar toggle handlers
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const menuBtn = document.getElementById('menuBtn');
+
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        });
+
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    </script>
+
+    <script>
+        // QR code form submission handler
+       <script>
+    document.getElementById('qrForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const courseId = document.getElementById('courseSelect').value;
+        const masterKey = document.getElementById('masterKey').value;
+        const qrImage = document.getElementById('qrCodeImage');
+
+        qrImage.src = `/generate_qr/${courseId}?key=${encodeURIComponent(masterKey)}`;
+        qrImage.style.display = 'block';
+    });
+</script>
+
+
+        // QR code image error handler
+        document.getElementById('qrCodeImage').addEventListener('error', function() {
+            alert('Failed to load QR code. Please try again.');
+            this.style.display = 'none';
+        });
+    </script>
+</body>
+</html>

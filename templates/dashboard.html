@@ -11,7 +11,7 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>DPFinal</h2>
-            <button class="close-btn" id="closeSidebar">&times;</button>
+            <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">&times;</button>
         </div>
 
         <div class="sidebar-content">
@@ -19,13 +19,13 @@
                 <ul>
                     <li>
                         <a href="{{ url_for('dashboard_courses') }}" class="nav-item {% if section == 'courses' %}active{% endif %}">
-                            <span class="nav-icon">📚</span>
+                            <span class="nav-icon" aria-hidden="true">📚</span>
                             <span class="nav-text">Courses</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('dashboard_presence') }}" class="nav-item {% if section == 'presence' %}active{% endif %}">
-                            <span class="nav-icon">📊</span>
+                            <span class="nav-icon" aria-hidden="true">📊</span>
                             <span class="nav-text">Presence</span>
                         </a>
                     </li>
@@ -43,13 +43,13 @@
     </div>
 
     <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" tabindex="-1"></div>
 
     <!-- Main Content -->
     <div class="main-content">
         <!-- Top Header -->
         <header class="top-header">
-            <button class="menu-btn" id="menuBtn">
+            <button class="menu-btn" id="menuBtn" aria-label="Open sidebar menu">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -59,6 +59,13 @@
 
         <!-- Content Area -->
         <div class="content-area">
+            {% macro subject_card(name) %}
+            <div class="subject-card">
+                <h4>{{ name }}</h4>
+                <a href="{{ url_for('subject_attendance') }}?subject={{ name | urlencode }}" class="check-btn" role="button">Check</a>
+            </div>
+            {% endmacro %}
+
             {% if section == 'courses' %}
             <!-- Courses Section -->
             <section id="courses-section" class="content-section active">
@@ -70,38 +77,14 @@
                 <div class="year-section">
                     <h3 class="year-title">First Year</h3>
                     <div class="subjects-grid">
-                        <div class="subject-card">
-                            <h4>Математика 1</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Математика+1'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Дигитална логика и системи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Дигитална+логика+и+системи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Структурирано програмирање</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Структурирано+програмирање'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Апликативен софтвер</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Апликативен+софтвер'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Математика 2</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Математика+2'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Архитектура и организација на компјутери</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Архитектура+и+организација+на+компјутери'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Веб технологии</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Веб+технологии'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Напредно програмирање</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Напредно+програмирање'">Check</button>
-                        </div>
+                        {{ subject_card('Математика 1') }}
+                        {{ subject_card('Дигитална логика и системи') }}
+                        {{ subject_card('Структурирано програмирање') }}
+                        {{ subject_card('Апликативен софтвер') }}
+                        {{ subject_card('Математика 2') }}
+                        {{ subject_card('Архитектура и организација на компјутери') }}
+                        {{ subject_card('Веб технологии') }}
+                        {{ subject_card('Напредно програмирање') }}
                     </div>
                 </div>
 
@@ -109,38 +92,14 @@
                 <div class="year-section">
                     <h3 class="year-title">Second Year</h3>
                     <div class="subjects-grid">
-                        <div class="subject-card">
-                            <h4>Системски софтвер</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Системски+софтвер'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Податочни комуникации и мрежи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Податочни+комуникации+и+мрежи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Алгоритми и структури на податоци</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Алгоритми+и+структури+на+податоци'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Објектно ориентирано програмирање</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Објектно+ориентирано+програмирање'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Бази на податоци</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Бази+на+податоци'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Компјутерска графика</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Компјутерска+графика'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Проектирање и менаџмент на компјутерски мрежи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Проектирање+и+менаџмент+на+компјутерски+мрежи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Солид моделирање</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Солид+моделирање'">Check</button>
-                        </div>
+                        {{ subject_card('Системски софтвер') }}
+                        {{ subject_card('Податочни комуникации и мрежи') }}
+                        {{ subject_card('Алгоритми и структури на податоци') }}
+                        {{ subject_card('Објектно ориентирано програмирање') }}
+                        {{ subject_card('Бази на податоци') }}
+                        {{ subject_card('Компјутерска графика') }}
+                        {{ subject_card('Проектирање и менаџмент на компјутерски мрежи') }}
+                        {{ subject_card('Солид моделирање') }}
                     </div>
                 </div>
 
@@ -148,38 +107,14 @@
                 <div class="year-section">
                     <h3 class="year-title">Third Year</h3>
                     <div class="subjects-grid">
-                        <div class="subject-card">
-                            <h4>Деловни информациски системи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Деловни+информациски+системи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Математичко моделирање и компјутерски симулации</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Математичко+моделирање+и+компјутерски+симулации'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Анализа и логички дизајн на информациски системи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Анализа+и+логички+дизајн+на+информациски+системи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Принципи на мултимедиски системи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Принципи+на+мултимедиски+системи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Веб програмирање</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Веб+програмирање'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Основи на вештачка интелигенција</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Основи+на+вештачка+интелигенција'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Индустриска информатика</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Индустриска+информатика'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Неструктурирани бази на податоци</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Неструктурирани+бази+на+податоци'">Check</button>
-                        </div>
+                        {{ subject_card('Деловни информациски системи') }}
+                        {{ subject_card('Математичко моделирање и компјутерски симулации') }}
+                        {{ subject_card('Анализа и логички дизајн на информациски системи') }}
+                        {{ subject_card('Принципи на мултимедиски системи') }}
+                        {{ subject_card('Веб програмирање') }}
+                        {{ subject_card('Основи на вештачка интелигенција') }}
+                        {{ subject_card('Индустриска информатика') }}
+                        {{ subject_card('Неструктурирани бази на податоци') }}
                     </div>
                 </div>
 
@@ -187,108 +122,40 @@
                 <div class="year-section">
                     <h3 class="year-title">Fourth Year</h3>
                     <div class="subjects-grid">
-                        <div class="subject-card">
-                            <h4>Безбедност на компјутерски системи и мрежи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Безбедност+на+компјутерски+системи+и+мрежи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Роботика и автоматизација</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Роботика+и+автоматизација'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Податочно рударење и аналитика на големи количества на податоци</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Податочно+рударење+и+аналитика+на+големи+количества+на+податоци'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Сервисно-ориентирани архитектури</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Сервисно-ориентирани+архитектури'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Безжични комуникации</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Безжични+комуникации'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Бизнис интелигенција и системи за поддршка на одлучување</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Бизнис+интелигенција+и+системи+за+поддршка+на+одлучување'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Програмирање за мобилни платформи</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Програмирање+за+мобилни+платформи'">Check</button>
-                        </div>
-                        <div class="subject-card">
-                            <h4>Системи базирани на знаење</h4>
-                            <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Системи+базирани+на+знаење'">Check</button>
-                        </div>
+                        {{ subject_card('Безбедност на компјутерски системи и мрежи') }}
+                        {{ subject_card('Роботика и автоматизација') }}
+                        {{ subject_card('Податочно рударење и аналитика на големи количества на податоци') }}
+                        {{ subject_card('Сервисно-ориентирани архитектури') }}
+                        {{ subject_card('Безжични комуникации') }}
+                        {{ subject_card('Бизнис интелигенција и системи за поддршка на одлучување') }}
+                        {{ subject_card('Програмирање за мобилни платформи') }}
+                        {{ subject_card('Системи базирани на знаење') }}
                     </div>
 
                     <!-- Elective Subjects Section -->
                     <div class="elective-section">
                         <h4 class="elective-title">Elective Subjects</h4>
                         <div class="subjects-grid">
-                            <div class="subject-card elective">
-                                <h4>Иновациски менаџмент</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Иновациски+менаџмент'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Финансиски технологии</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Финансиски+технологии'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Интелектуален капитал и конкурентност</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Интелектуален+капитал+и+конкурентност'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>е-влада и е-управување</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=е-влада+и+е-управување'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Организациско однесување и развој</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Организациско+однесување+и+развој'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Англиски за специфични цели</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Англиски+за+специфични+цели'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Англиски јазик за основни вештини</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Англиски+јазик+за+основни+вештини'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Деловни комуникациски вештини</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Деловни+комуникациски+вештини'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Економија и бизнис</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Економија+и+бизнис'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Концепти на информатичко општество</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Концепти+на+информатичко+општество'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Интернет банкарство</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Интернет+банкарство'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Организациско претприемништво</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Организациско+претприемништво'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Криптографија и информациска безбедност</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Криптографија+и+информациска+безбедност'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Комуникациски технологии</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Комуникациски+технологии'">Check</button>
-                            </div>
-                            <div class="subject-card elective">
-                                <h4>Обработка на природен јазик</h4>
-                                <button class="check-btn" onclick="window.location.href='/subject_attendance?subject=Обработка+на+природен+јазик'">Check</button>
-                            </div>
+                            {{ subject_card('Иновациски менаџмент') }}
+                            {{ subject_card('Финансиски технологии') }}
+                            {{ subject_card('Интелектуален капитал и конкурентност') }}
+                            {{ subject_card('е-влада и е-управување') }}
+                            {{ subject_card('Организациско однесување и развој') }}
+                            {{ subject_card('Англиски за специфични цели') }}
+                            {{ subject_card('Англиски јазик за основни вештини') }}
+                            {{ subject_card('Деловни комуникациски вештини') }}
+                            {{ subject_card('Економија и бизнис') }}
+                            {{ subject_card('Концепти на информатичко општество') }}
+                            {{ subject_card('Интернет банкарство') }}
+                            {{ subject_card('Организациско претприемништво') }}
+                            {{ subject_card('Криптографија и информациска безбедност') }}
+                            {{ subject_card('Комуникациски технологии') }}
+                            {{ subject_card('Обработка на природен јазик') }}
                         </div>
                     </div>
                 </div>
             </section>
+
             {% elif section == 'presence' %}
             <!-- Presence Section -->
             <section id="presence-section" class="content-section active">
