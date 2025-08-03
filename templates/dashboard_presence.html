@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Presence - DPFinal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
     <!-- Sidebar -->
@@ -58,46 +58,48 @@
                 </div>
 
                 <div id="presenceContent">
-                    <p>Select a course and click "Check" on the Courses page to view attendance data here.</p>
-
-                    <!-- Attendance Records Display -->
                     {% if courses %}
-                    <ul>
-                        {% for course in courses %}
-                            <li>
-                                <strong>{{ course.name }}</strong>
-                                <ul>
-                                    {% if attendance[course.id] %}
-                                        {% for checkin_time in attendance[course.id] %}
-                                            <li>Checked in: {{ checkin_time }}</li>
-                                        {% endfor %}
-                                    {% else %}
-                                        <li>No attendance records yet.</li>
-                                    {% endif %}
-                                </ul>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                        {% if has_any_attendance %}
+                            <div class="presence-list">
+                                {% for course in courses %}
+                                    <div class="presence-item">
+                                        <div class="course-name"><strong>{{ course.name }}</strong></div>
+                                        <div class="attendance-status {% if attendance[course.id] %}has-records{% else %}no-records{% endif %}">
+                                            {% if attendance[course.id] %}
+                                                <ul style="margin:0; padding-left: 20px;">
+                                                    {% for checkin_time in attendance[course.id] %}
+                                                        <li>Checked in: {{ checkin_time }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                No attendance records yet.
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p>Select a course and click "Check" on the Courses page to view attendance data here.</p>
+                        {% endif %}
                     {% else %}
-                    <p>No courses available.</p>
+                        <p>No courses available.</p>
                     {% endif %}
 
                     <h3>Generate QR Code for Attendance</h3>
 
-<form id="qrForm">
-    <label for="courseSelect">Select Course:</label>
-    <select id="courseSelect" name="course_id">
-        {% for course in courses %}
-        <option value="{{ course.id }}">{{ course.name }}</option>
-        {% endfor %}
-    </select>
+                    <form id="qrForm">
+                        <label for="courseSelect">Select Course:</label>
+                        <select id="courseSelect" name="course_id">
+                            {% for course in courses %}
+                                <option value="{{ course.id }}">{{ course.name }}</option>
+                            {% endfor %}
+                        </select>
 
-    <label for="masterKey">Enter Master Key:</label>
-    <input type="password" id="masterKey" name="master_key" required />
+                        <label for="masterKey">Enter Master Key:</label>
+                        <input type="password" id="masterKey" name="master_key" required />
 
-    <button type="submit">Generate QR</button>
-</form>
-
+                        <button type="submit">Generate QR</button>
+                    </form>
 
                     <div id="qrCodeContainer" style="margin-top: 20px;">
                         <img id="qrCodeImage" src="" alt="QR Code" style="display:none; max-width: 300px;" />
@@ -128,22 +130,17 @@
             sidebar.classList.remove('active');
             sidebarOverlay.classList.remove('active');
         });
-    </script>
 
-    <script>
         // QR code form submission handler
-       <script>
-    document.getElementById('qrForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const courseId = document.getElementById('courseSelect').value;
-        const masterKey = document.getElementById('masterKey').value;
-        const qrImage = document.getElementById('qrCodeImage');
+        document.getElementById('qrForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const courseId = document.getElementById('courseSelect').value;
+            const masterKey = document.getElementById('masterKey').value;
+            const qrImage = document.getElementById('qrCodeImage');
 
-        qrImage.src = `/generate_qr/${courseId}?key=${encodeURIComponent(masterKey)}`;
-        qrImage.style.display = 'block';
-    });
-</script>
-
+            qrImage.src = `/generate_qr/${courseId}?key=${encodeURIComponent(masterKey)}`;
+            qrImage.style.display = 'block';
+        });
 
         // QR code image error handler
         document.getElementById('qrCodeImage').addEventListener('error', function() {

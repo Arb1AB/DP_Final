@@ -1,14 +1,17 @@
-from flask import Flask, render_template, redirect, url_for, session, request, send_file
+from flask import Flask, render_template, redirect, url_for, session, request, send_file, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os
 from dotenv import load_dotenv
+load_dotenv()
 import qrcode
 import io
 from datetime import datetime, timedelta
 from collections import defaultdict
+
 # Master key for professors to generate QR codes
-MASTER_KEY = "professor123"
+MASTER_KEY = os.getenv("MASTER_KEY")
+
 
 # Define courses with IDs matching what we'll use in the dropdown and QR generation
 courses = {
@@ -166,21 +169,20 @@ def dashboard_courses():
 # Access code for presence page
 PRESENCE_ACCESS_CODE = 'letmein123'  # change this to your preferred secret code
 
-# Presence authorization page for entering the code
+# Presence authorization page for entering the master key
 @app.route('/presence_auth', methods=['GET', 'POST'])
 @login_required
 def presence_auth():
     error = None
     if request.method == 'POST':
-        entered_code = request.form.get('access_code')
-        if entered_code == PRESENCE_ACCESS_CODE:
+        entered_key = request.form.get('access_code')
+        if entered_key == MASTER_KEY:
             session['presence_access_granted'] = True
             return redirect(url_for('dashboard_presence'))
         else:
-            error = "Invalid access code. Please try again."
+            error = "Invalid master key. Please try again."
     return render_template('presence_auth.html', error=error)
 
-# Dashboard - presence view with access code check
 @app.route('/dashboard/presence')
 @login_required
 def dashboard_presence():
@@ -195,21 +197,25 @@ def dashboard_presence():
     courses_list = get_user_courses(user.id)
 
     # Prepare attendance data for this user:
-    # attendance_records is a defaultdict: user_id -> course_id -> list of datetime
     user_attendance = {}
+    has_any_attendance = False
     for course in courses_list:
         course_id = course['id']
         records = attendance_records[user.id].get(course_id, [])
-        # Format each datetime as string "YYYY-MM-DD HH:MM"
         formatted_records = [dt.strftime('%Y-%m-%d %H:%M') for dt in records]
         user_attendance[course_id] = formatted_records
+        if formatted_records:
+            has_any_attendance = True
 
     return render_template(
-        'presence.html',
+        'dashboard_presence.html',
         user=user,
         courses=courses_list,
-        attendance=user_attendance
+        attendance=user_attendance,
+        has_any_attendance=has_any_attendance
     )
+
+
 
 
 # Subject attendance detail view
@@ -235,35 +241,27 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# QR Code Generation route
+# QR Code Generation route WITHOUT login requirement — only checks master key
 @app.route('/generate_qr/<course_id>')
-@login_required
 def generate_qr(course_id):
     key = request.args.get('key')
+
+    print("Key in URL:", key)
+    print("MASTER_KEY from .env:", MASTER_KEY)
+
     if key != MASTER_KEY:
-        abort(403)  # Forbidden
+        abort(403)  # Forbidden if key doesn't match
+
+    if course_id not in courses:
+        return f"Invalid course ID: {course_id}", 404
 
     # Generate the check-in URL with course ID
-    check_in_url = url_for('check_in', course_id=course_id, _external=True)
+    check_in_url = url_for('checkin', course_id=course_id, _external=True)
     img = qrcode.make(check_in_url)
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png')
-
-    
-    # Validate course_id against the courses dict keys
-    if course_id not in courses:
-        return f"Invalid course ID: {course_id}", 404
-
-    # URL encoded in QR points to checkin route with user id and course id
-    checkin_url = url_for('checkin', uid=user.id, course_id=course_id, _external=True)
-
-    qr_img = qrcode.make(checkin_url)
-    img_io = io.BytesIO()
-    qr_img.save(img_io, 'PNG')
-    img_io.seek(0)
-    return send_file(img_io, mimetype='image/png')
 
 # Cooldown check for check-in
 @app.route('/checkin')
