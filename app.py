@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session, request, send_file, abort
+from flask import Flask, render_template, redirect, url_for, session, request, send_file, abort, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os
@@ -8,10 +8,10 @@ import qrcode
 import io
 from datetime import datetime, timedelta
 from collections import defaultdict
+import socket  # Added for dynamic IP detection
 
 # Master key for professors to generate QR codes
 MASTER_KEY = os.getenv("MASTER_KEY")
-
 
 # Define courses with IDs matching what we'll use in the dropdown and QR generation
 courses = {
@@ -122,6 +122,18 @@ def load_user(user_id):
 # Store attendance records: user_id -> course_id -> list of datetime
 attendance_records = defaultdict(lambda: defaultdict(list))
 
+# Helper function to get local IP dynamically
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))  # arbitrary IP, no real connection made
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
 # Login page route
 @app.route('/')
 @app.route('/login')
@@ -136,7 +148,7 @@ def google_login():
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-# Google OAuth callback
+# Google OAuth callback with email domain restriction
 @app.route('/callback')
 def google_callback():
     token = google.authorize_access_token()
@@ -147,11 +159,18 @@ def google_callback():
         user_id = user_info['id']
         email = user_info['email']
         name = user_info['name']
+
+        # Restrict login to emails ending with '@uklo.edu.mk'
+        if not email.lower().endswith('@uklo.edu.mk'):
+            flash('Access denied: Unauthorized email domain.', 'error')
+            return redirect(url_for('login'))
+
         user = User(user_id, email, name)
         users[user_id] = user
         login_user(user)
         return redirect(url_for('dashboard_courses'))
     
+    flash('Login failed. Please try again.', 'error')
     return redirect(url_for('login'))
 
 # Redirect /dashboard to courses by default
@@ -215,9 +234,6 @@ def dashboard_presence():
         has_any_attendance=has_any_attendance
     )
 
-
-
-
 # Subject attendance detail view
 @app.route('/subject_attendance')
 @login_required
@@ -246,32 +262,38 @@ def logout():
 def generate_qr(course_id):
     key = request.args.get('key')
 
-    print("Key in URL:", key)
-    print("MASTER_KEY from .env:", MASTER_KEY)
-
     if key != MASTER_KEY:
         abort(403)  # Forbidden if key doesn't match
 
     if course_id not in courses:
         return f"Invalid course ID: {course_id}", 404
 
-    # Generate the check-in URL with course ID
-    check_in_url = url_for('checkin', course_id=course_id, _external=True)
+    # Use PUBLIC_URL from environment (your ngrok URL), else fallback to local IP
+    public_url = os.getenv('PUBLIC_URL')
+    if public_url:
+        base_url = public_url.rstrip('/')
+    else:
+        local_ip = get_local_ip()
+        base_url = f"http://{local_ip}:5000"
+
+    check_in_url = f"{base_url}/checkin?course_id={course_id}"
+
     img = qrcode.make(check_in_url)
     buf = io.BytesIO()
     img.save(buf, format='PNG')
     buf.seek(0)
     return send_file(buf, mimetype='image/png')
 
-# Cooldown check for check-in
+# Check-in route now requires login and uses current_user.id
 @app.route('/checkin')
+@login_required
 def checkin():
-    user_id = request.args.get('uid')
     course_id = request.args.get('course_id')
 
-    if not user_id or not course_id:
-        return "Missing parameters", 400
+    if not course_id or course_id not in courses:
+        return "Invalid or missing course ID", 400
 
+    user_id = current_user.id
     now = datetime.now()
     cooldown_key = (user_id, course_id)
     last_checkin = checkin_cooldowns.get(cooldown_key)
@@ -280,15 +302,12 @@ def checkin():
         remaining = timedelta(minutes=10) - (now - last_checkin)
         return f"You’ve already checked in. Try again in {int(remaining.total_seconds() // 60) + 1} minutes.", 429
 
-    # If no cooldown or cooldown expired, allow check-in
+    # Record check-in time
     checkin_cooldowns[cooldown_key] = now
-
-    # Record attendance
     attendance_records[user_id][course_id].append(now)
 
-    return f"✅ Successfully checked in to course {courses.get(course_id, course_id)} at {now.strftime('%H:%M:%S')}!"
-
+    return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S')}!"
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)
