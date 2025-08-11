@@ -138,16 +138,23 @@ def google_callback():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     user_info = resp.json()
-    
+
     if user_info:
         user_id = user_info['id']
-        email = user_info['email'].lower()
+        email = user_info['email']
         name = user_info['name']
 
+        # Load allowed domains and emails from env, split by comma and strip spaces
         allowed_domains = [d.strip().lower() for d in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',') if d.strip()]
         allowed_emails = [e.strip().lower() for e in os.getenv('ALLOWED_EMAILS', '').split(',') if e.strip()]
 
-        if not any(email.endswith(domain) for domain in allowed_domains) and email not in allowed_emails:
+        email_lower = email.lower()
+
+        # Check if email ends with allowed domain or is in allowed emails list
+        domain_allowed = any(email_lower.endswith(domain) for domain in allowed_domains)
+        email_allowed = email_lower in allowed_emails
+
+        if not (domain_allowed or email_allowed):
             flash('Access denied: Unauthorized email domain or email.', 'error')
             return redirect(url_for('login'))
 
@@ -155,7 +162,7 @@ def google_callback():
         users[user_id] = user
         login_user(user)
         return redirect(url_for('dashboard_courses'))
-    
+
     flash('Login failed. Please try again.', 'error')
     return redirect(url_for('login'))
 
