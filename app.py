@@ -8,7 +8,6 @@ import qrcode
 import io
 from datetime import datetime, timedelta
 from collections import defaultdict
-import socket  # Added for dynamic IP detection
 
 # Master key for professors to generate QR codes
 MASTER_KEY = os.getenv("MASTER_KEY")
@@ -67,9 +66,6 @@ courses = {
 # Cooldown tracking dictionary
 checkin_cooldowns = {}  # Format: {(user_id, course_id): datetime}
 
-# Load environment variables
-load_dotenv()
-
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
@@ -122,18 +118,6 @@ def load_user(user_id):
 # Store attendance records: user_id -> course_id -> list of datetime
 attendance_records = defaultdict(lambda: defaultdict(list))
 
-# Helper function to get local IP dynamically
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(('10.255.255.255', 1))  # arbitrary IP, no real connection made
-        IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
-
 # Login page route
 @app.route('/')
 @app.route('/login')
@@ -148,7 +132,7 @@ def google_login():
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-# Google OAuth callback with email domain restriction
+# Google OAuth callback with flexible email/domain restriction
 @app.route('/callback')
 def google_callback():
     token = google.authorize_access_token()
@@ -157,12 +141,14 @@ def google_callback():
     
     if user_info:
         user_id = user_info['id']
-        email = user_info['email']
+        email = user_info['email'].lower()
         name = user_info['name']
 
-        # Restrict login to emails ending with '@uklo.edu.mk'
-        if not email.lower().endswith('@uklo.edu.mk'):
-            flash('Access denied: Unauthorized email domain.', 'error')
+        allowed_domains = [d.strip().lower() for d in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',') if d.strip()]
+        allowed_emails = [e.strip().lower() for e in os.getenv('ALLOWED_EMAILS', '').split(',') if e.strip()]
+
+        if not any(email.endswith(domain) for domain in allowed_domains) and email not in allowed_emails:
+            flash('Access denied: Unauthorized email domain or email.', 'error')
             return redirect(url_for('login'))
 
         user = User(user_id, email, name)
@@ -268,14 +254,12 @@ def generate_qr(course_id):
     if course_id not in courses:
         return f"Invalid course ID: {course_id}", 404
 
-    # Use PUBLIC_URL from environment (your ngrok URL), else fallback to local IP
+    # Use PUBLIC_URL from environment (set in Render)
     public_url = os.getenv('PUBLIC_URL')
-    if public_url:
-        base_url = public_url.rstrip('/')
-    else:
-        local_ip = get_local_ip()
-        base_url = f"http://{local_ip}:5000"
+    if not public_url:
+        return "Error: PUBLIC_URL environment variable not set.", 500
 
+    base_url = public_url.rstrip('/')
     check_in_url = f"{base_url}/checkin?course_id={course_id}"
 
     img = qrcode.make(check_in_url)
@@ -308,7 +292,7 @@ def checkin():
 
     return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S')}!"
 
-# Run the app
+# Run the app with waitress on Render
 if __name__ == "__main__":
     from waitress import serve
     import os
