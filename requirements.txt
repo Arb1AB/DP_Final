@@ -4,3 +4,5 @@ authlib
 requests
 python-dotenv
 Flask-SQLAlchemy
+waitress
+qrcode
