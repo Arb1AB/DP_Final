@@ -15,7 +15,51 @@ MASTER_KEY = os.getenv("MASTER_KEY")
 
 courses = {
     '1': 'Математика 1',
-    # ... (all your courses here, omitted for brevity, keep all your entries)
+    '2': 'Дигитална логика и системи',
+    '3': 'Структурирано програмирање',
+    '4': 'Апликативен софтвер',
+    '5': 'Математика 2',
+    '6': 'Архитектура и организација на компјутери',
+    '7': 'Веб технологии',
+    '8': 'Напредно програмирање',
+    '9': 'Системски софтвер',
+    '10': 'Податочни комуникации и мрежи',
+    '11': 'Алгоритми и структури на податоци',
+    '12': 'Објектно ориентирано програмирање',
+    '13': 'Бази на податоци',
+    '14': 'Компјутерска графика',
+    '15': 'Проектирање и менаџмент на компјутерски мрежи',
+    '16': 'Солид моделирање',
+    '17': 'Деловни информациски системи',
+    '18': 'Математичко моделирање и компјутерски симулации',
+    '19': 'Анализа и логички дизајн на информациски системи',
+    '20': 'Принципи на мултимедиски системи',
+    '21': 'Веб програмирање',
+    '22': 'Основи на вештачка интелигенција',
+    '23': 'Индустриска информатика',
+    '24': 'Неструктурирани бази на податоци',
+    '25': 'Безбедност на компјутерски системи и мрежи',
+    '26': 'Роботика и автоматизација',
+    '27': 'Податочно рударење и аналитика на големи количества на податоци',
+    '28': 'Сервисно-ориентирани архитектури',
+    '29': 'Безжични комуникации',
+    '30': 'Бизнис интелигенција и системи за поддршка на одлучување',
+    '31': 'Програмирање за мобилни платформи',
+    '32': 'Системи базирани на знаење',
+    '33': 'Иновациски менаџмент',
+    '34': 'Финансиски технологии',
+    '35': 'Интелектуален капитал и конкурентност',
+    '36': 'е-влада и е-управување',
+    '37': 'Организациско однесување и развој',
+    '38': 'Англиски за специфични цели',
+    '39': 'Англиски јазик за основни вештини',
+    '40': 'Деловни комуникациски вештини',
+    '41': 'Економија и бизнис',
+    '42': 'Концепти на информатичко општество',
+    '43': 'Интернет банкарство',
+    '44': 'Организациско претприемништво',
+    '45': 'Криптографија и информациска безбедност',
+    '46': 'Комуникациски технологии',
     '47': 'Обработка на природен јазик'
 }
 
@@ -71,10 +115,10 @@ def login():
     messages = get_flashed_messages(with_categories=True)
     return render_template('login.html', messages=messages)
 
+# <-- THIS IS THE FIX: add prompt='select_account' to force account chooser -->
 @app.route('/auth/google')
 def google_login():
     redirect_uri = url_for('google_callback', _external=True)
-    # Add prompt=select_account to force Google account chooser popup
     return google.authorize_redirect(redirect_uri, prompt='select_account')
 
 @app.route('/callback')
@@ -83,75 +127,30 @@ def google_callback():
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     user_info = resp.json()
 
-    if not user_info:
-        flash('Login failed. Please try again.', 'error')
-        return redirect(url_for('login'))
-
-    email = user_info.get('email', '').lower()
-    name = user_info.get('name', '')
-    user_id = user_info.get('id', '')
-
-    # Get allowed emails and domains from env
-    allowed_domains = [d.strip().lower() for d in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',') if d.strip()]
-    allowed_emails = [e.strip().lower() for e in os.getenv('ALLOWED_EMAILS', '').split(',') if e.strip()]
-
-    # Check if email is allowed
-    domain_allowed = any(email.endswith(domain) for domain in allowed_domains)
-    email_allowed = email in allowed_emails
-
-    if not (domain_allowed or email_allowed):
-        flash('Access denied: Unauthorized email domain or email.', 'error')
-        return redirect(url_for('login'))
-
-    # Save user info in session for selection page
-    session['oauth_user_info'] = {
-        'id': user_id,
-        'email': email,
-        'name': name
-    }
-
-    # For now we have only one account from Google.
-    # But you asked for selection UI, so let's show a page with one email to confirm.
-    # In the future, if you have multiple accounts, you can pass a list here.
-
-    return redirect(url_for('select_account'))
-
-@app.route('/select_account', methods=['GET', 'POST'])
-def select_account():
-    if 'oauth_user_info' not in session:
-        flash('No OAuth user info found. Please log in again.', 'error')
-        return redirect(url_for('login'))
-
-    user_info = session['oauth_user_info']
-
-    if request.method == 'POST':
-        selected_email = request.form.get('email')
-        # Confirm email matches session
-        if selected_email != user_info['email']:
-            flash('Selected email does not match OAuth data.', 'error')
-            return redirect(url_for('select_account'))
-
+    if user_info:
         user_id = user_info['id']
         email = user_info['email']
         name = user_info.get('name', '')
 
-        # Log in user
+        allowed_domains = [d.strip().lower() for d in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',') if d.strip()]
+        allowed_emails = [e.strip().lower() for e in os.getenv('ALLOWED_EMAILS', '').split(',') if e.strip()]
+
+        email_lower = email.lower()
+
+        domain_allowed = any(email_lower.endswith(domain) for domain in allowed_domains)
+        email_allowed = email_lower in allowed_emails
+
+        if not (domain_allowed or email_allowed):
+            flash('Access denied: Unauthorized email domain or email.', 'error')
+            return redirect(url_for('login'))
+
         user = User(user_id, email, name)
         users[user_id] = user
         login_user(user)
-
-        # Clear oauth_user_info from session for security
-        session.pop('oauth_user_info', None)
-
         return redirect(url_for('dashboard_courses'))
 
-    # GET request - show selection page
-    # (If you want multiple accounts in the future, pass a list here)
-    accounts = [user_info['email']]
-    return render_template('select_account.html', accounts=accounts)
-
-# The rest of your routes remain unchanged (dashboard, presence_auth, generate_qr, checkin, etc.)
-# Paste all the routes you had before unchanged below...
+    flash('Login failed. Please try again.', 'error')
+    return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
