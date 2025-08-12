@@ -272,6 +272,11 @@ def checkin():
 
     return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S UTC')}!"
 
+@app.route('/test-redirect-uri')
+def test_redirect_uri():
+    return url_for('google_callback', _external=True)
+
+
 if __name__ == "__main__":
     from waitress import serve
     port = int(os.environ.get("PORT", 5000))
