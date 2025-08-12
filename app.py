@@ -68,6 +68,14 @@ checkin_cooldowns = {}
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
+# Force HTTPS redirect (fixes Google OAuth redirect_uri mismatch)
+@app.before_request
+def before_request():
+    # Only redirect if not development environment and not secure
+    if not request.is_secure and os.environ.get("FLASK_ENV") != "development":
+        url = request.url.replace("http://", "https://", 1)
+        return redirect(url, code=301)
+
 oauth = OAuth(app)
 
 google = oauth.register(
@@ -115,10 +123,9 @@ def login():
     messages = get_flashed_messages(with_categories=True)
     return render_template('login.html', messages=messages)
 
-# <-- THIS IS THE FIX: add prompt='select_account' to force account chooser -->
 @app.route('/auth/google')
 def google_login():
-    redirect_uri = url_for('google_callback', _external=True)
+    redirect_uri = url_for('google_callback', _external=True, _scheme='https')
     return google.authorize_redirect(redirect_uri, prompt='select_account')
 
 @app.route('/callback')
@@ -274,7 +281,8 @@ def checkin():
 
 @app.route('/test-redirect-uri')
 def test_redirect_uri():
-    return url_for('google_callback', _external=True)
+    # Just to check the generated redirect URI (should be HTTPS)
+    return url_for('google_callback', _external=True, _scheme='https')
 
 
 if __name__ == "__main__":
