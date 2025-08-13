@@ -1,18 +1,19 @@
-from flask import Flask, render_template, redirect, url_for, session, request, send_file, abort, flash, get_flashed_messages
+from flask import Flask, render_template, redirect, url_for, session, request, send_file, abort, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os
 from dotenv import load_dotenv
+load_dotenv()
 import qrcode
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from collections import defaultdict
+import socket  # Added for dynamic IP detection
 
-# Load environment variables
-load_dotenv()
-
+# Master key for professors to generate QR codes
 MASTER_KEY = os.getenv("MASTER_KEY")
 
+# Define courses with IDs matching what we'll use in the dropdown and QR generation
 courses = {
     '1': 'Математика 1',
     '2': 'Дигитална логика и системи',
@@ -63,21 +64,20 @@ courses = {
     '47': 'Обработка на природен јазик'
 }
 
-checkin_cooldowns = {}
+# Cooldown tracking dictionary
+checkin_cooldowns = {}  # Format: {(user_id, course_id): datetime}
 
+# Load environment variables
+load_dotenv()
+
+# Create Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
-# Force HTTPS redirect (fixes Google OAuth redirect_uri mismatch)
-@app.before_request
-def before_request():
-    # Only redirect if not development environment and not secure
-    if not request.is_secure and os.environ.get("FLASK_ENV") != "development":
-        url = request.url.replace("http://", "https://", 1)
-        return redirect(url, code=301)
-
+# Initialize OAuth
 oauth = OAuth(app)
 
+# Configure Google OAuth
 google = oauth.register(
     name='google',
     client_id=os.environ.get('GOOGLE_CLIENT_ID'),
@@ -91,86 +91,104 @@ google = oauth.register(
     }
 )
 
+# Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Simple User class
 class User(UserMixin):
     def __init__(self, id, email, name):
         self.id = id
         self.email = email
         self.name = name
 
+# Store users in memory (in production, use a database)
 users = {}
 
+# Return all courses as list of dicts for presence dropdown
 def get_user_courses(user_id):
     return [{'id': key, 'name': value} for key, value in courses.items()]
 
+# Dummy function to get the current user
 def get_current_user():
     return current_user if current_user.is_authenticated else None
 
+# User loader function
 @login_manager.user_loader
 def load_user(user_id):
     return users.get(user_id)
 
+# Store attendance records: user_id -> course_id -> list of datetime
 attendance_records = defaultdict(lambda: defaultdict(list))
 
+# Helper function to get local IP dynamically
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))  # arbitrary IP, no real connection made
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+# Login page route
 @app.route('/')
 @app.route('/login')
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard_courses'))
-    messages = get_flashed_messages(with_categories=True)
-    return render_template('login.html', messages=messages)
+    return render_template('login.html')
 
+# Google OAuth login
 @app.route('/auth/google')
 def google_login():
-    redirect_uri = url_for('google_callback', _external=True, _scheme='https')
-    return google.authorize_redirect(redirect_uri, prompt='select_account')
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
 
+# Google OAuth callback with email domain restriction
 @app.route('/callback')
 def google_callback():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     user_info = resp.json()
-
+    
     if user_info:
         user_id = user_info['id']
         email = user_info['email']
-        name = user_info.get('name', '')
+        name = user_info['name']
 
-        allowed_domains = [d.strip().lower() for d in os.getenv('ALLOWED_EMAIL_DOMAINS', '').split(',') if d.strip()]
-        allowed_emails = [e.strip().lower() for e in os.getenv('ALLOWED_EMAILS', '').split(',') if e.strip()]
-
-        email_lower = email.lower()
-
-        domain_allowed = any(email_lower.endswith(domain) for domain in allowed_domains)
-        email_allowed = email_lower in allowed_emails
-
-        if not (domain_allowed or email_allowed):
-            flash('Access denied: Unauthorized email domain or email.', 'error')
+        # Restrict login to emails ending with '@uklo.edu.mk'
+        if not email.lower().endswith('@uklo.edu.mk'):
+            flash('Access denied: Unauthorized email domain.', 'error')
             return redirect(url_for('login'))
 
         user = User(user_id, email, name)
         users[user_id] = user
         login_user(user)
         return redirect(url_for('dashboard_courses'))
-
+    
     flash('Login failed. Please try again.', 'error')
     return redirect(url_for('login'))
 
+# Redirect /dashboard to courses by default
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return redirect(url_for('dashboard_courses'))
 
+# Dashboard - courses view
 @app.route('/dashboard/courses')
 @login_required
 def dashboard_courses():
     return render_template('dashboard.html', user=current_user, section='courses')
 
-PRESENCE_ACCESS_CODE = 'letmein123'
+# Access code for presence page
+PRESENCE_ACCESS_CODE = 'letmein123'  # change this to your preferred secret code
 
+# Presence authorization page for entering the master key
 @app.route('/presence_auth', methods=['GET', 'POST'])
 @login_required
 def presence_auth():
@@ -194,8 +212,10 @@ def dashboard_presence():
     if not user:
         return redirect(url_for('login'))
 
+    # Get user's courses
     courses_list = get_user_courses(user.id)
 
+    # Prepare attendance data for this user:
     user_attendance = {}
     has_any_attendance = False
     for course in courses_list:
@@ -214,6 +234,7 @@ def dashboard_presence():
         has_any_attendance=has_any_attendance
     )
 
+# Subject attendance detail view
 @app.route('/subject_attendance')
 @login_required
 def subject_attendance():
@@ -229,26 +250,32 @@ def subject_attendance():
 
     return render_template('subject_attendance.html', subject=subject, attendance=attendance_data, user=current_user)
 
+# Logout
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# QR Code Generation route WITHOUT login requirement — only checks master key
 @app.route('/generate_qr/<course_id>')
 def generate_qr(course_id):
     key = request.args.get('key')
+
     if key != MASTER_KEY:
-        abort(403)
+        abort(403)  # Forbidden if key doesn't match
 
     if course_id not in courses:
         return f"Invalid course ID: {course_id}", 404
 
+    # Use PUBLIC_URL from environment (your ngrok URL), else fallback to local IP
     public_url = os.getenv('PUBLIC_URL')
-    if not public_url:
-        return "Error: PUBLIC_URL environment variable not set.", 500
+    if public_url:
+        base_url = public_url.rstrip('/')
+    else:
+        local_ip = get_local_ip()
+        base_url = f"http://{local_ip}:5000"
 
-    base_url = public_url.rstrip('/')
     check_in_url = f"{base_url}/checkin?course_id={course_id}"
 
     img = qrcode.make(check_in_url)
@@ -257,6 +284,7 @@ def generate_qr(course_id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png')
 
+# Check-in route now requires login and uses current_user.id
 @app.route('/checkin')
 @login_required
 def checkin():
@@ -266,7 +294,7 @@ def checkin():
         return "Invalid or missing course ID", 400
 
     user_id = current_user.id
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     cooldown_key = (user_id, course_id)
     last_checkin = checkin_cooldowns.get(cooldown_key)
 
@@ -274,18 +302,12 @@ def checkin():
         remaining = timedelta(minutes=10) - (now - last_checkin)
         return f"You’ve already checked in. Try again in {int(remaining.total_seconds() // 60) + 1} minutes.", 429
 
+    # Record check-in time
     checkin_cooldowns[cooldown_key] = now
     attendance_records[user_id][course_id].append(now)
 
-    return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S UTC')}!"
+    return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S')}!"
 
-@app.route('/test-redirect-uri')
-def test_redirect_uri():
-    # Just to check the generated redirect URI (should be HTTPS)
-    return url_for('google_callback', _external=True, _scheme='https')
-
-
-if __name__ == "__main__":
-    from waitress import serve
-    port = int(os.environ.get("PORT", 5000))
-    serve(app, host="0.0.0.0", port=port)
+# Run the app
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", debug=True)
