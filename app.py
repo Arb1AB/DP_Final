@@ -7,13 +7,20 @@ load_dotenv()
 import qrcode
 import io
 from datetime import datetime, timedelta
+import sqlite3
 from collections import defaultdict
-import socket  # Added for dynamic IP detection
+import socket
 
-# Master key for professors to generate QR codes
+# ========================
+# CONFIG
+# ========================
 MASTER_KEY = os.getenv("MASTER_KEY")
 
-# Define courses with IDs matching what we'll use in the dropdown and QR generation
+# Automatically detect local IP
+hostname = socket.gethostname()
+local_ip = socket.gethostbyname(hostname)
+BASE_URL = "http://192.168.1.100:5000" 
+
 courses = {
     '1': 'Математика 1',
     '2': 'Дигитална логика и системи',
@@ -64,20 +71,19 @@ courses = {
     '47': 'Обработка на природен јазик'
 }
 
-# Cooldown tracking dictionary
-checkin_cooldowns = {}  # Format: {(user_id, course_id): datetime}
+# ========================
+# GLOBALS
+# ========================
+checkin_cooldowns = {}       # {(user_id, course_id): datetime}
+qr_code_timestamps = {}      # {course_id: datetime}
 
-# Load environment variables
-load_dotenv()
-
-# Create Flask app
+# ========================
+# FLASK APP & LOGIN
+# ========================
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
 
-# Initialize OAuth
 oauth = OAuth(app)
-
-# Configure Google OAuth
 google = oauth.register(
     name='google',
     client_id=os.environ.get('GOOGLE_CLIENT_ID'),
@@ -86,55 +92,99 @@ google = oauth.register(
     token_endpoint='https://oauth2.googleapis.com/token',
     userinfo_endpoint='https://www.googleapis.com/oauth2/v1/userinfo',
     jwks_uri='https://www.googleapis.com/oauth2/v3/certs',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
+    client_kwargs={'scope': 'openid email profile'}
 )
 
-# Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Simple User class
 class User(UserMixin):
     def __init__(self, id, email, name):
         self.id = id
         self.email = email
         self.name = name
 
-# Store users in memory (in production, use a database)
 users = {}
 
-# Return all courses as list of dicts for presence dropdown
-def get_user_courses(user_id):
-    return [{'id': key, 'name': value} for key, value in courses.items()]
-
-# Dummy function to get the current user
-def get_current_user():
-    return current_user if current_user.is_authenticated else None
-
-# User loader function
 @login_manager.user_loader
 def load_user(user_id):
     return users.get(user_id)
 
-# Store attendance records: user_id -> course_id -> list of datetime
-attendance_records = defaultdict(lambda: defaultdict(list))
+def get_user_courses(user_id):
+    return [{'id': key, 'name': value} for key, value in courses.items()]
 
-# Helper function to get local IP dynamically
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(('10.255.255.255', 1))  # arbitrary IP, no real connection made
-        IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
+def get_current_user():
+    return current_user if current_user.is_authenticated else None
 
-# Login page route
+# ========================
+# DATABASE
+# ========================
+DB_FILE = "attendance.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT,
+                    name TEXT
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS attendance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT,
+                    course_id TEXT,
+                    checkin_time TEXT
+                )''')
+    # manual_checkin table for pending check-ins
+    c.execute('''CREATE TABLE IF NOT EXISTS manual_checkin (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    course_id TEXT,
+                    student_name TEXT,
+                    student_surname TEXT,
+                    student_id TEXT,
+                    checkin_time TEXT,
+                    status TEXT DEFAULT 'pending'
+                )''')
+    conn.commit()
+    conn.close()
+
+def add_user(user_id, email, name):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)", (user_id, email, name))
+    conn.commit()
+    conn.close()
+
+def add_attendance(user_id, course_id, checkin_time):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
+              (user_id, course_id, checkin_time))
+    conn.commit()
+    conn.close()
+
+def add_manual_checkin(course_id, student_name, student_surname, student_id, checkin_time):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO manual_checkin (course_id, student_name, student_surname, student_id, checkin_time) VALUES (?, ?, ?, ?, ?)",
+        (course_id, student_name, student_surname, student_id, checkin_time)
+    )
+    conn.commit()
+    conn.close()
+
+def get_attendance(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT course_id, checkin_time FROM attendance WHERE user_id=?", (user_id,))
+    data = c.fetchall()
+    conn.close()
+    return data
+
+# ========================
+# ROUTES
+# ========================
 @app.route('/')
 @app.route('/login')
 def login():
@@ -142,53 +192,45 @@ def login():
         return redirect(url_for('dashboard_courses'))
     return render_template('login.html')
 
-# Google OAuth login
 @app.route('/auth/google')
 def google_login():
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-# Google OAuth callback with email domain restriction
 @app.route('/callback')
 def google_callback():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     user_info = resp.json()
-    
+
     if user_info:
         user_id = user_info['id']
         email = user_info['email']
         name = user_info['name']
 
-        # Restrict login to emails ending with '@uklo.edu.mk'
         if not email.lower().endswith('@uklo.edu.mk'):
             flash('Access denied: Unauthorized email domain.', 'error')
             return redirect(url_for('login'))
 
         user = User(user_id, email, name)
         users[user_id] = user
+        add_user(user_id, email, name)
         login_user(user)
         return redirect(url_for('dashboard_courses'))
-    
+
     flash('Login failed. Please try again.', 'error')
     return redirect(url_for('login'))
 
-# Redirect /dashboard to courses by default
 @app.route('/dashboard')
 @login_required
 def dashboard():
     return redirect(url_for('dashboard_courses'))
 
-# Dashboard - courses view
 @app.route('/dashboard/courses')
 @login_required
 def dashboard_courses():
     return render_template('dashboard.html', user=current_user, section='courses')
 
-# Access code for presence page
-PRESENCE_ACCESS_CODE = 'letmein123'  # change this to your preferred secret code
-
-# Presence authorization page for entering the master key
 @app.route('/presence_auth', methods=['GET', 'POST'])
 @login_required
 def presence_auth():
@@ -212,16 +254,14 @@ def dashboard_presence():
     if not user:
         return redirect(url_for('login'))
 
-    # Get user's courses
     courses_list = get_user_courses(user.id)
+    raw_records = get_attendance(user.id)
 
-    # Prepare attendance data for this user:
     user_attendance = {}
     has_any_attendance = False
     for course in courses_list:
         course_id = course['id']
-        records = attendance_records[user.id].get(course_id, [])
-        formatted_records = [dt.strftime('%Y-%m-%d %H:%M') for dt in records]
+        formatted_records = [r[1] for r in raw_records if r[0] == course_id]
         user_attendance[course_id] = formatted_records
         if formatted_records:
             has_any_attendance = True
@@ -234,49 +274,32 @@ def dashboard_presence():
         has_any_attendance=has_any_attendance
     )
 
-# Subject attendance detail view
 @app.route('/subject_attendance')
 @login_required
 def subject_attendance():
     subject = request.args.get('subject')
     if not subject:
         return "Subject not specified", 400
+    return render_template('subject_attendance.html', subject=subject, user=current_user)
 
-    attendance_data = [
-        {'date': '2025-01-20', 'status': 'Present'},
-        {'date': '2025-01-22', 'status': 'Absent'},
-        {'date': '2025-01-25', 'status': 'Present'},
-    ]
-
-    return render_template('subject_attendance.html', subject=subject, attendance=attendance_data, user=current_user)
-
-# Logout
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# QR Code Generation route WITHOUT login requirement — only checks master key
+# ========================
+# QR CODE GENERATION
+# ========================
 @app.route('/generate_qr/<course_id>')
 def generate_qr(course_id):
     key = request.args.get('key')
-
     if key != MASTER_KEY:
-        abort(403)  # Forbidden if key doesn't match
-
+        abort(403)
     if course_id not in courses:
         return f"Invalid course ID: {course_id}", 404
 
-    # Use PUBLIC_URL from environment (your ngrok URL), else fallback to local IP
-    public_url = os.getenv('PUBLIC_URL')
-    if public_url:
-        base_url = public_url.rstrip('/')
-    else:
-        local_ip = get_local_ip()
-        base_url = f"http://{local_ip}:5000"
-
-    check_in_url = f"{base_url}/checkin?course_id={course_id}"
+    check_in_url = f"{BASE_URL}/checkin_manual/{course_id}"
 
     img = qrcode.make(check_in_url)
     buf = io.BytesIO()
@@ -284,30 +307,75 @@ def generate_qr(course_id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png')
 
-# Check-in route now requires login and uses current_user.id
-@app.route('/checkin')
+# ========================
+# MANUAL CHECK-IN ROUTE (STUDENT)
+# ========================
+@app.route('/checkin_manual/<course_id>', methods=['GET', 'POST'])
+def checkin_manual(course_id):
+    if course_id not in courses:
+        return "Invalid course ID", 400
+
+    if request.method == 'POST':
+        student_name = request.form.get('student_name')
+        student_surname = request.form.get('student_surname')
+        student_id = request.form.get('student_id')
+
+        if not all([student_name, student_surname, student_id]):
+            flash("Please fill in all fields.", "error")
+            return redirect(request.url)
+
+        now = datetime.now()
+        add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
+        return f"✅ Your presence has been recorded and is pending professor approval."
+
+    return render_template('manual_checkin.html', course_name=courses[course_id], course_id=course_id)
+
+# ========================
+# MANUAL CHECK-IN APPROVAL (PROFESSOR)
+# ========================
+@app.route('/manual_checkins/<course_id>')
 @login_required
-def checkin():
-    course_id = request.args.get('course_id')
+def manual_checkins(course_id):
+    if course_id not in courses:
+        return "Invalid course ID", 400
 
-    if not course_id or course_id not in courses:
-        return "Invalid or missing course ID", 400
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, student_name, student_surname, student_id, checkin_time, status FROM manual_checkin WHERE course_id=? AND status='pending'", 
+              (course_id,))
+    pending = c.fetchall()
+    conn.close()
 
-    user_id = current_user.id
-    now = datetime.now()
-    cooldown_key = (user_id, course_id)
-    last_checkin = checkin_cooldowns.get(cooldown_key)
+    return render_template('manual_checkins.html', course_id=course_id, course_name=courses[course_id], pending=pending)
 
-    if last_checkin and now - last_checkin < timedelta(minutes=10):
-        remaining = timedelta(minutes=10) - (now - last_checkin)
-        return f"You’ve already checked in. Try again in {int(remaining.total_seconds() // 60) + 1} minutes.", 429
+@app.route('/manual_checkin_action/<int:checkin_id>/<action>')
+@login_required
+def manual_checkin_action(checkin_id, action):
+    if action not in ['approve', 'reject']:
+        return "Invalid action", 400
 
-    # Record check-in time
-    checkin_cooldowns[cooldown_key] = now
-    attendance_records[user_id][course_id].append(now)
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
 
-    return f"✅ Successfully checked in to course {courses[course_id]} at {now.strftime('%H:%M:%S')}!"
+    if action == 'approve':
+        c.execute("SELECT course_id, student_name, student_surname, student_id, checkin_time FROM manual_checkin WHERE id=?", (checkin_id,))
+        row = c.fetchone()
+        if row:
+            course_id, student_name, student_surname, student_id, checkin_time = row
+            # Add to attendance with manual identifier
+            c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
+                      ('manual:' + student_id, course_id, checkin_time))
+            c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
+    else:
+        c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))
 
-# Run the app
+    conn.commit()
+    conn.close()
+    return redirect(request.referrer or url_for('dashboard_courses'))
+
+# ========================
+# RUN
+# ========================
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", debug=True)
+    init_db()
+    app.run(host="0.0.0.0", port=5000, debug=True)

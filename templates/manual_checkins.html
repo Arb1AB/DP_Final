@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pending Check-ins - {{ course_name }}</title>
+</head>
+<body>
+    <h1>Pending Manual Check-ins for {{ course_name }}</h1>
+    {% if pending %}
+        <ul>
+        {% for checkin in pending %}
+            <li>
+                {{ checkin[1] }} {{ checkin[2] }} (ID: {{ checkin[3] }}) at {{ checkin[4] }}
+                <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}">✅ Approve</a>
+                <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}">❌ Reject</a>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No pending check-ins.</p>
+    {% endif %}
+</body>
+</html>
