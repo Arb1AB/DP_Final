@@ -8,7 +8,6 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f5f7fa;
             padding: 20px;
-            color: #333;
         }
         .container {
             max-width: 800px;
@@ -81,7 +80,7 @@
 </head>
 <body>
     <div class="container">
-        <a href="{{ url_for('dashboard_courses') }}" class="back-link">&larr; Back to Dashboard</a>
+        <a href="{{ url_for('professor_dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
         <h1>Pending Manual Check-ins for {{ course_name }}</h1>
         
         {% if pending %}
