@@ -68,5 +68,23 @@
             <button type="submit">Submit</button>
         </form>
     </div>
+<div class="auth-box">
+    <h2>Enter Access Code</h2>
+    
+    {% if success %}
+        <p style="color:green; font-weight:bold;">✅ Attendance marked successfully!</p>
+    {% endif %}
+    
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    
+    <form method="post">
+        <input type="password" name="access_code" placeholder="Enter code" required />
+        <button type="submit">Submit</button>
+    </form>
+</div>
+
+
 </body>
 </html>

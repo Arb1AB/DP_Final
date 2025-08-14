@@ -10,7 +10,7 @@ from datetime import datetime
 import sqlite3
 from collections import defaultdict
 import socket
-
+from flask import jsonify
 # ========================
 # CONFIG
 # ========================
@@ -142,11 +142,13 @@ def init_db():
     
     # Create attendance table
     c.execute('''CREATE TABLE IF NOT EXISTS attendance (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT,
-                    course_id TEXT,
-                    checkin_time TEXT
-                )''')
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                student_name TEXT,
+                course_id TEXT,
+                checkin_time TEXT
+            )''')
+
     
     # Create manual_checkin table
     c.execute('''CREATE TABLE IF NOT EXISTS manual_checkin (
@@ -185,13 +187,16 @@ def add_user(user_id, email, name, student_id):
     conn.commit()
     conn.close()
 
-def add_attendance(student_id, course_id, checkin_time):
+def add_attendance(user_id, course_id, checkin_time, student_name=None):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
-              (student_id, course_id, checkin_time))
+    c.execute(
+        "INSERT INTO attendance (user_id, course_id, checkin_time, student_name) VALUES (?, ?, ?, ?)",
+        (user_id, course_id, checkin_time, student_name)
+    )
     conn.commit()
     conn.close()
+
 
 def add_to_professor_db(course_id, student_id, student_name, checkin_time, status):
     conn = sqlite3.connect(DB_FILE)
@@ -254,16 +259,35 @@ def get_pending_checkins():
 def get_attendance_by_course(course_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
+
+    # Fetch regular attendance
     c.execute("""
         SELECT a.id, u.name, u.student_id, a.checkin_time
         FROM attendance a
         JOIN users u ON a.user_id = u.id
         WHERE a.course_id = ?
-        ORDER BY a.checkin_time DESC
     """, (course_id,))
-    attendance = c.fetchall()
+    regular_attendance = c.fetchall()
+
+    # Fetch approved manual check-ins
+    c.execute("""
+        SELECT id, student_name || ' ' || student_surname AS full_name, student_id, checkin_time
+        FROM manual_checkin
+        WHERE course_id = ? AND status='approved'
+    """, (course_id,))
+    manual_attendance = c.fetchall()
+
     conn.close()
-    return attendance
+
+    # Combine both lists
+    combined = list(regular_attendance) + list(manual_attendance)
+
+    # Sort by check-in time descending
+    combined.sort(key=lambda x: x[3], reverse=True)
+
+    return combined
+
+
 
 def get_student_attendance(student_id):
     conn = sqlite3.connect(DB_FILE)
@@ -369,28 +393,68 @@ def dashboard_courses():
 def course_attendance(course_id):
     if course_id not in courses:
         abort(404, description="Course not found")
-    
+
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+
     if current_user.is_professor:
-        # Professor sees all attendance for the course
-        attendance = get_attendance_by_course(course_id)
-    else:
-        # Student sees only their own attendance for the course
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
+        # Professor sees all attendance for the course (regular + approved manual)
         c.execute("""
-            SELECT a.checkin_time
+            SELECT a.id, u.name, u.student_id, a.checkin_time
             FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.course_id = ?
+            ORDER BY a.checkin_time DESC
+        """, (course_id,))
+        regular = c.fetchall()
+
+        # Include approved manual check-ins
+        c.execute("""
+            SELECT id, student_name || ' ' || student_surname AS name, student_id, checkin_time
+            FROM manual_checkin
+            WHERE course_id = ? AND status='approved'
+            ORDER BY checkin_time DESC
+        """, (course_id,))
+        manual = c.fetchall()
+
+        # Combine both
+        attendance = regular + manual
+
+        conn.close()
+        return render_template('course_attendance.html',
+                               user=current_user,
+                               course_id=course_id,
+                               course_name=courses[course_id],
+                               attendance=attendance)
+    else:
+        # Student sees only their own attendance (regular + approved manual)
+        c.execute("""
+            SELECT a.id, u.name, u.student_id, a.checkin_time
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
             WHERE a.user_id = ? AND a.course_id = ?
             ORDER BY a.checkin_time DESC
         """, (current_user.id, course_id))
-        attendance = c.fetchall()
+        regular = c.fetchall()
+
+        c.execute("""
+            SELECT id, student_name || ' ' || student_surname AS name, student_id, checkin_time
+            FROM manual_checkin
+            WHERE student_id = ? AND course_id = ? AND status='approved'
+            ORDER BY checkin_time DESC
+        """, (current_user.student_id, course_id))
+        manual = c.fetchall()
+
+        attendance = regular + manual
+
         conn.close()
-    
-    return render_template('course_attendance.html',
-                           user=current_user,
-                           course_id=course_id,
-                           course_name=courses[course_id],
-                           attendance=attendance)
+        return render_template('course_attendance_student.html',
+                               user=current_user,
+                               course_id=course_id,
+                               course_name=courses[course_id],
+                               attendance=attendance)
+
+
 
 @app.route('/logout')
 @login_required
@@ -460,36 +524,27 @@ def generate_qr(course_id):
     return send_file(buf, mimetype='image/png')
 
 @app.route('/checkin/<course_id>')
-def checkin_redirect(course_id):
-    return redirect(url_for('checkin_manual', course_id=course_id))
-
-@app.route('/checkin_manual/<course_id>', methods=['GET', 'POST'])
-def checkin_manual(course_id):
-    if course_id not in courses:
-        return "Invalid course ID", 400
-
-    success = False
+@login_required
+def checkin(course_id):
+    if current_user.is_professor:
+        return "Professors cannot check-in", 403
     
-    if request.method == 'POST':
-        student_name = request.form.get('student_name')
-        student_surname = request.form.get('student_surname')
-        student_id = request.form.get('student_id')
-
-        if not all([student_name, student_surname, student_id]):
-            flash("Please fill in all fields.", "error")
-            return redirect(request.url)
-
-        now = datetime.now()
-        add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
-        success = True
-
-    return render_template('manual_checkin.html', 
-                           course_name=courses[course_id], 
-                           course_id=course_id,
-                           success=success)
+    now = datetime.now()
+    
+    # Check cooldown
+    key = (current_user.id, course_id)
+    last_checkin = checkin_cooldowns.get(key)
+    if last_checkin and (now - last_checkin).total_seconds() < 60:  # 60s cooldown
+        return "Please wait before checking in again", 429
+    
+    checkin_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    add_attendance(current_user.id, course_id, checkin_time, student_name=current_user.name)
+    checkin_cooldowns[key] = now
+    
+    return f"Checked in successfully at {checkin_time}!"
 
 # ========================
-# MANUAL CHECK-IN APPROVAL (PROFESSOR)
+# MANUAL CHECK-IN ACTION
 # ========================
 @app.route('/manual_checkin_action/<int:checkin_id>/<action>')
 @login_required
@@ -502,7 +557,11 @@ def manual_checkin_action(checkin_id, action):
 
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT course_id, student_name, student_surname, student_id, checkin_time FROM manual_checkin WHERE id=?", (checkin_id,))
+    c.execute("""
+        SELECT course_id, student_name, student_surname, student_id, checkin_time 
+        FROM manual_checkin 
+        WHERE id=?
+    """, (checkin_id,))
     row = c.fetchone()
     
     if not row:
@@ -510,24 +569,26 @@ def manual_checkin_action(checkin_id, action):
         return "Check-in record not found", 404
         
     course_id, student_name, student_surname, student_id, checkin_time = row
+    full_name = f"{student_name} {student_surname}"
     
     if action == 'approve':
-        add_attendance(student_id, course_id, checkin_time)
-        full_name = f"{student_name} {student_surname}"
+        # Add to attendance table **with full name**
+        add_attendance(student_id, course_id, checkin_time, student_name=full_name)
         add_to_professor_db(course_id, student_id, full_name, checkin_time, "approved")
         c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
     else:
-        full_name = f"{student_name} {student_surname}"
         add_to_professor_db(course_id, student_id, full_name, checkin_time, "rejected")
         c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))
 
     conn.commit()
     conn.close()
-    return redirect(url_for('professor_manual_checkins', course_id=course_id))
+    
+    return redirect(url_for('course_attendance', course_id=course_id))
+
 
 # ========================
-# RUN
+# INIT
 # ========================
-if __name__ == '__main__':
+if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Attendance - {{ course_name }}</title>
+    <title>My Attendance - {{ course_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
@@ -11,7 +11,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 900px;
+            max-width: 700px;
             margin: 0 auto;
             background: white;
             padding: 25px;
@@ -39,38 +39,44 @@
         tr:hover {
             background-color: #f5f5f5;
         }
-        .manual {
-            background-color: #fff3cd; /* light yellow for manual check-ins */
+        .type-regular {
+            color: #27ae60; /* green for regular check-in */
+            font-weight: bold;
         }
-        .status-present {
-            color: #27ae60;
+        .type-manual {
+            color: #2980b9; /* blue for manual approved */
             font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Attendance for "{{ course_name }}"</h1>
-        <a href="{{ url_for('dashboard_courses') }}">&larr; Back to Courses</a>
+        <h1>My Attendance for "{{ course_name }}"</h1>
+        <p>Name: {{ user.name }} ({{ user.student_id }})</p>
+        <a href="{{ url_for('dashboard_courses') }}">← Back to Courses</a>
 
         <table>
             <thead>
                 <tr>
-                    <th>Student Name</th>
-                    <th>Student ID</th>
                     <th>Check-in Time</th>
                     <th>Type</th>
                 </tr>
             </thead>
             <tbody>
-                {% for record in attendance %}
-                <tr class="{% if record[0] in [m.id for m in record if 'manual' in record[3]|default('')] %}manual{% endif %}">
-                    <td>{{ record[1] }}</td>
-                    <td>{{ record[2] }}</td>
-                    <td>{{ record[3] }}</td>
-                    <td>{% if record[0]|string in manual_ids|default([]) %}Manual{% else %}Regular{% endif %}</td>
-                </tr>
-                {% endfor %}
+                {% if attendance %}
+                    {% for record in attendance %}
+                        <tr>
+                            <td>{{ record[3] }}</td>
+                            <td class="{{ 'type-manual' if ' ' in record[1] else 'type-regular' }}">
+                                {{ 'Manual Approved' if ' ' in record[1] else 'Regular' }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="2">No attendance records yet.</td>
+                    </tr>
+                {% endif %}
             </tbody>
         </table>
     </div>
