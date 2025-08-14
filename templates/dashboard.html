@@ -1,186 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard - DPFinal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <meta charset="UTF-8">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .welcome {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .info {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            color: #7f8c8d;
+        }
+        .logout-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+    </style>
 </head>
 <body>
-    <!-- Macro for subject cards - MOVED TO TOP -->
-    {% macro subject_card(name) %}
-    <div class="subject-card">
-        <h4>{{ name }}</h4>
-        <a href="{{ url_for('subject_attendance') }}?subject={{ name | urlencode }}" class="check-btn" role="button">Check</a>
+    <div class="container">
+        <h1 class="welcome">Welcome, {{ user.name }}!</h1>
+        <p class="info">You are logged in as a student. This system is for professors only.</p>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
     </div>
-    {% endmacro %}
-
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>DPFinal</h2>
-            <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">&times;</button>
-        </div>
-
-        <div class="sidebar-content">
-            <nav class="sidebar-nav">
-                <ul>
-                    <li>
-                        <a href="{{ url_for('dashboard_courses') }}" class="nav-item {% if section == 'courses' %}active{% endif %}">
-                            <span class="nav-icon" aria-hidden="true">📚</span>
-                            <span class="nav-text">Courses</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('dashboard_presence') }}" class="nav-item {% if section == 'presence' %}active{% endif %}">
-                            <span class="nav-icon" aria-hidden="true">📊</span>
-                            <span class="nav-text">Presence</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <p><strong>{{ user.name }}</strong></p>
-                <p class="user-email">{{ user.email }}</p>
-                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar Overlay -->
-    <div class="sidebar-overlay" id="sidebarOverlay" tabindex="-1"></div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Top Header -->
-        <header class="top-header">
-            <button class="menu-btn" id="menuBtn" aria-label="Open sidebar menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <h1>Welcome, {{ user.name }}!</h1>
-            
-            <!-- Course Selection for Pending Check-ins -->
-            <div class="course-selection">
-                <form method="GET" action="{{ url_for('dashboard_courses') }}">
-                    <select name="course_id">
-                        <option value="">-- Select Course --</option>
-                        {% for id, name in courses.items() %}
-                            <option value="{{ id }}" {% if id == selected_course_id %}selected{% endif %}>
-                                {{ name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit">Select</button>
-                </form>
-                
-                {% if selected_course_id %}
-                    <a href="{{ url_for('manual_checkins', course_id=selected_course_id) }}" class="pending-link">
-                        📋 View Pending Check-ins
-                    </a>
-                {% endif %}
-            </div>
-        </header>
-
-        <!-- Content Area -->
-        <div class="content-area">
-            {% if section == 'courses' %}
-            <!-- Courses Section -->
-            <section id="courses-section" class="content-section active">
-                <div class="section-header">
-                    <h2>📚 Courses</h2>
-                </div>
-
-                <!-- First Year -->
-                <div class="year-section">
-                    <h3 class="year-title">First Year</h3>
-                    <div class="subjects-grid">
-                        {% for id in range(1, 9) %}
-                            {{ subject_card(courses[id|string]) }}
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Second Year -->
-                <div class="year-section">
-                    <h3 class="year-title">Second Year</h3>
-                    <div class="subjects-grid">
-                        {% for id in range(9, 17) %}
-                            {{ subject_card(courses[id|string]) }}
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Third Year -->
-                <div class="year-section">
-                    <h3 class="year-title">Third Year</h3>
-                    <div class="subjects-grid">
-                        {% for id in range(17, 25) %}
-                            {{ subject_card(courses[id|string]) }}
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Fourth Year -->
-                <div class="year-section">
-                    <h3 class="year-title">Fourth Year</h3>
-                    <div class="subjects-grid">
-                        {% for id in range(25, 33) %}
-                            {{ subject_card(courses[id|string]) }}
-                        {% endfor %}
-                    </div>
-
-                    <!-- Elective Subjects Section -->
-                    <div class="elective-section">
-                        <h4 class="elective-title">Elective Subjects</h4>
-                        <div class="subjects-grid">
-                            {% for id in range(33, 48) %}
-                                {{ subject_card(courses[id|string]) }}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {% elif section == 'presence' %}
-            <!-- Presence Section -->
-            <section id="presence-section" class="content-section active">
-                <div class="section-header">
-                    <h2>📊 Presence</h2>
-                </div>
-                <div id="presenceContent">
-                    <p>Select a course and click "Check" on the Courses page to view attendance data here.</p>
-                </div>
-            </section>
-            {% endif %}
-        </div>
-    </div>
-
-    <script>
-        // Sidebar toggle handlers
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
-        const closeSidebarBtn = document.getElementById('closeSidebar');
-        const menuBtn = document.getElementById('menuBtn');
-
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.add('active');
-            sidebarOverlay.classList.add('active');
-        });
-
-        closeSidebarBtn.addEventListener('click', () => {
-            sidebar.classList.remove('active');
-            sidebarOverlay.classList.remove('active');
-        });
-
-        sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('active');
-            sidebarOverlay.classList.remove('active');
-        });
-    </script>
 </body>
 </html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Presence</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .search-box {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Student Presence Records</h1>
+        
+        <div class="search-box">
+            <input type="text" id="studentId" placeholder="Enter Student ID">
+            <button onclick="loadPresence()">View Presence</button>
+        </div>
+        
+        <div id="results">
+            <table id="presenceTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Date & Time</th>
+                    </tr>
+                </thead>
+                <tbody id="presenceBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function loadPresence() {
+            const studentId = document.getElementById('studentId').value;
+            if (!studentId) return;
+            
+            fetch(`/api/presence/${studentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const table = document.getElementById('presenceTable');
+                    const body = document.getElementById('presenceBody');
+                    
+                    body.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        body.innerHTML = '<tr><td colspan="2">No records found</td></tr>';
+                        table.style.display = 'table';
+                        return;
+                    }
+                    
+                    data.forEach(record => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${record.course}</td>
+                            <td>${record.timestamp}</td>
+                        `;
+                        body.appendChild(row);
+                    });
+                    
+                    table.style.display = 'table';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        // Handle Enter key press
+        document.getElementById('studentId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadPresence();
+            }
+        });
+    </script>
+</body>
+</html>

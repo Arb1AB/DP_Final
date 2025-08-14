@@ -6,3 +6,5 @@ python-dotenv
 Flask-SQLAlchemy
 waitress
 qrcode
+Flask-WTF
+flask-jwt-extended

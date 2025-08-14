@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Professor Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f7fa;
+        }
+        .status-approved {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .pending-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+        .actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-approve {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-approve:hover {
+            background: #219653;
+        }
+        .btn-reject {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-reject:hover {
+            background: #c0392b;
+        }
+        .btn-generate {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .qr-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .qr-container img {
+            max-width: 300px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .course-select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Professor Dashboard</h1>
+            <a href="{{ url_for('logout') }}" class="btn btn-reject">Logout</a>
+        </div>
+        
+        <!-- QR Code Generation -->
+        <div class="section">
+            <h2 class="section-title">Generate QR Code</h2>
+            <form onsubmit="event.preventDefault(); generateQR()">
+                <label for="courseSelect">Select Course:</label>
+                <select id="courseSelect" class="course-select">
+                    {% for id, name in courses.items() %}
+                        <option value="{{ id }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-generate">Generate QR</button>
+            </form>
+            
+            <div class="qr-container" id="qrContainer">
+                <!-- QR code will appear here -->
+            </div>
+        </div>
+        
+        <!-- Pending Check-ins -->
+        <div class="section">
+            <h2 class="section-title">Pending Check-ins</h2>
+            {% if pending %}
+                {% for checkin in pending %}
+                    <div class="pending-item">
+                        <strong>{{ checkin[2] }} {{ checkin[3] }}</strong> (ID: {{ checkin[4] }})<br>
+                        Course: {{ courses.get(checkin[1], "Unknown") }}<br>
+                        Checked in at: {{ checkin[5] }}
+                        <div class="actions">
+                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}" class="btn btn-approve">✅ Approve</a>
+                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}" class="btn btn-reject">❌ Reject</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No pending check-ins.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Professor's Data -->
+        <div class="section">
+            <h2 class="section-title">Attendance Records</h2>
+            {% if professor_data %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Check-in Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in professor_data %}
+                            <tr>
+                                <td>{{ record.course_name }}</td>
+                                <td>{{ record.student_id }}</td>
+                                <td>{{ record.student_name }}</td>
+                                <td>{{ record.checkin_time }}</td>
+                                <td class="status-{{ record.status }}">{{ record.status|capitalize }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No attendance records yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        function generateQR() {
+            const courseId = document.getElementById('courseSelect').value;
+            const qrContainer = document.getElementById('qrContainer');
+            
+            // Clear previous QR code
+            qrContainer.innerHTML = '';
+            
+            // Create image element
+            const img = document.createElement('img');
+            img.src = `/generate_qr/${courseId}`;
+            img.alt = "QR Code";
+            
+            qrContainer.appendChild(img);
+        }
+    </script>
+</body>
+</html>
