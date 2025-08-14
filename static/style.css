@@ -285,6 +285,8 @@ body.attendance-page {
     padding: 20px 30px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -445,6 +447,88 @@ body.attendance-page {
     color: #e74c3c;
 }
 
+/* Course Selection */
+.course-selection {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.course-selection form {
+    display: flex;
+    gap: 10px;
+}
+
+.course-selection select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+}
+
+.course-selection button {
+    padding: 8px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pending-link {
+    background: #4CAF50;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 4px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+}
+
+/* Manual Check-ins */
+.checkin-item {
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    background: #f9f9f9;
+}
+
+.actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.actions a {
+    padding: 8px 15px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.actions .approve {
+    background: #27ae60;
+    color: white;
+}
+
+.actions .approve:hover {
+    background: #219653;
+}
+
+.actions .reject {
+    background: #e74c3c;
+    color: white;
+}
+
+.actions .reject:hover {
+    background: #c0392b;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
@@ -459,6 +543,14 @@ body.attendance-page {
     }
     .subjects-grid {
         grid-template-columns: 1fr;
+    }
+    .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .course-selection {
+        width: 100%;
+        margin-top: 15px;
     }
 }
 
@@ -495,12 +587,10 @@ body.attendance-page {
     }
 
     .flash-messages {
-    margin: 1rem 0;
+        margin: 1rem 0;
+    }
 }
 
-
-
-}
 .flash-messages {
     margin: 1.5rem 0;
     max-width: 400px;

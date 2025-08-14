@@ -5,6 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Attendance - {{ subject }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body.attendance-page {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            margin-bottom: 2rem;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 1rem;
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+        .status-present {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-absent {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body class="attendance-page">
     <header>
@@ -23,6 +86,21 @@
         </thead>
         <tbody>
             <!-- Attendance data will go here -->
+            <tr>
+                <td>2023-10-15</td>
+                <td class="status-present">Present</td>
+                <td>Introduction to {{ subject }}</td>
+            </tr>
+            <tr>
+                <td>2023-10-22</td>
+                <td class="status-absent">Absent</td>
+                <td>Advanced Concepts</td>
+            </tr>
+            <tr>
+                <td>2023-10-29</td>
+                <td class="status-present">Present</td>
+                <td>Practical Applications</td>
+            </tr>
         </tbody>
     </table>
 </body>

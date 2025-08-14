@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import qrcode
 import io
-from datetime import datetime, timedelta
+from datetime import datetime
 import sqlite3
 from collections import defaultdict
 import socket
@@ -19,7 +19,7 @@ MASTER_KEY = os.getenv("MASTER_KEY")
 # Automatically detect local IP
 hostname = socket.gethostname()
 local_ip = socket.gethostbyname(hostname)
-BASE_URL = "http://192.168.1.100:5000" 
+BASE_URL = os.getenv("BASE_URL", f"http://{local_ip}:5000")
 
 courses = {
     '1': 'Математика 1',
@@ -104,6 +104,7 @@ class User(UserMixin):
         self.id = id
         self.email = email
         self.name = name
+        self.student_id = None
 
 users = {}
 
@@ -125,18 +126,38 @@ DB_FILE = "attendance.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
+    
+    # Create users table with new schema
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     email TEXT,
+                    name TEXT,
+                    student_id TEXT
+                )''')
+    
+    # Try to add student_id column if table already existed
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN student_id TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Create courses table
+    c.execute('''CREATE TABLE IF NOT EXISTS courses (
+                    id TEXT PRIMARY KEY,
                     name TEXT
                 )''')
+    
+    # Create attendance table with proper relations
     c.execute('''CREATE TABLE IF NOT EXISTS attendance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT,
                     course_id TEXT,
-                    checkin_time TEXT
+                    checkin_time TEXT,
+                    FOREIGN KEY(user_id) REFERENCES users(student_id),
+                    FOREIGN KEY(course_id) REFERENCES courses(id)
                 )''')
-    # manual_checkin table for pending check-ins
+    
+    # Create manual_checkin table
     c.execute('''CREATE TABLE IF NOT EXISTS manual_checkin (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     course_id TEXT,
@@ -144,23 +165,31 @@ def init_db():
                     student_surname TEXT,
                     student_id TEXT,
                     checkin_time TEXT,
-                    status TEXT DEFAULT 'pending'
+                    status TEXT DEFAULT 'pending',
+                    FOREIGN KEY(course_id) REFERENCES courses(id)
                 )''')
+    
+    # Insert courses if not exists
+    for cid, cname in courses.items():
+        c.execute("INSERT OR IGNORE INTO courses (id, name) VALUES (?, ?)", (cid, cname))
+    
     conn.commit()
     conn.close()
 
-def add_user(user_id, email, name):
+def add_user(user_id, email, name, student_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)", (user_id, email, name))
+    c.execute("""INSERT OR IGNORE INTO users (id, email, name, student_id) 
+                 VALUES (?, ?, ?, ?)""", 
+              (user_id, email, name, student_id))
     conn.commit()
     conn.close()
 
-def add_attendance(user_id, course_id, checkin_time):
+def add_attendance(student_id, course_id, checkin_time):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
-              (user_id, course_id, checkin_time))
+              (student_id, course_id, checkin_time))
     conn.commit()
     conn.close()
 
@@ -177,10 +206,32 @@ def add_manual_checkin(course_id, student_name, student_surname, student_id, che
 def get_attendance(user_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT course_id, checkin_time FROM attendance WHERE user_id=?", (user_id,))
+    
+    # Get student ID for current user
+    c.execute("SELECT student_id FROM users WHERE id=?", (user_id,))
+    student_id_row = c.fetchone()
+    student_id = student_id_row[0] if student_id_row else None
+    
+    if not student_id:
+        return []
+    
+    # Get all attendance records for this student
+    c.execute("""
+        SELECT a.course_id, a.checkin_time 
+        FROM attendance a
+        WHERE a.user_id = ?
+        ORDER BY a.checkin_time DESC
+    """, (student_id,))
+    
     data = c.fetchall()
     conn.close()
-    return data
+    
+    # Format data by course
+    attendance_by_course = defaultdict(list)
+    for course_id, checkin_time in data:
+        attendance_by_course[course_id].append(checkin_time)
+    
+    return attendance_by_course
 
 # ========================
 # ROUTES
@@ -207,14 +258,21 @@ def google_callback():
         user_id = user_info['id']
         email = user_info['email']
         name = user_info['name']
-
+        
         if not email.lower().endswith('@uklo.edu.mk'):
             flash('Access denied: Unauthorized email domain.', 'error')
             return redirect(url_for('login'))
 
+        # Extract student ID from email (example@uklo.edu.mk -> example)
+        student_id = email.split('@')[0].lower()
+
+        # Create user with student ID
         user = User(user_id, email, name)
+        user.student_id = student_id
         users[user_id] = user
-        add_user(user_id, email, name)
+        
+        # Save to DB with student ID
+        add_user(user_id, email, name, student_id)
         login_user(user)
         return redirect(url_for('dashboard_courses'))
 
@@ -229,7 +287,14 @@ def dashboard():
 @app.route('/dashboard/courses')
 @login_required
 def dashboard_courses():
-    return render_template('dashboard.html', user=current_user, section='courses')
+    # Get selected course ID from query parameters
+    selected_course_id = request.args.get('course_id')
+    
+    return render_template('dashboard.html', 
+                          user=current_user, 
+                          section='courses',
+                          courses=courses,
+                          selected_course_id=selected_course_id)
 
 @app.route('/presence_auth', methods=['GET', 'POST'])
 @login_required
@@ -255,16 +320,16 @@ def dashboard_presence():
         return redirect(url_for('login'))
 
     courses_list = get_user_courses(user.id)
-    raw_records = get_attendance(user.id)
+    attendance_data = get_attendance(user.id)
 
+    # Format attendance for template
     user_attendance = {}
-    has_any_attendance = False
     for course in courses_list:
         course_id = course['id']
-        formatted_records = [r[1] for r in raw_records if r[0] == course_id]
-        user_attendance[course_id] = formatted_records
-        if formatted_records:
-            has_any_attendance = True
+        user_attendance[course_id] = attendance_data.get(course_id, [])
+    
+    # Calculate has_any_attendance
+    has_any_attendance = any(user_attendance.values())
 
     return render_template(
         'dashboard_presence.html',
@@ -315,6 +380,8 @@ def checkin_manual(course_id):
     if course_id not in courses:
         return "Invalid course ID", 400
 
+    success = False
+    
     if request.method == 'POST':
         student_name = request.form.get('student_name')
         student_surname = request.form.get('student_surname')
@@ -326,27 +393,38 @@ def checkin_manual(course_id):
 
         now = datetime.now()
         add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
-        return f"✅ Your presence has been recorded and is pending professor approval."
+        success = True
 
-    return render_template('manual_checkin.html', course_name=courses[course_id], course_id=course_id)
+    return render_template('manual_checkin.html', 
+                           course_name=courses[course_id], 
+                           course_id=course_id,
+                           success=success)
 
 # ========================
 # MANUAL CHECK-IN APPROVAL (PROFESSOR)
 # ========================
-@app.route('/manual_checkins/<course_id>')
+@app.route('/manual_checkins')
 @login_required
-def manual_checkins(course_id):
-    if course_id not in courses:
-        return "Invalid course ID", 400
-
+def manual_checkins():
+    course_id = request.args.get('course_id')
+    if not course_id or course_id not in courses:
+        flash("Please select a valid course", "error")
+        return redirect(url_for('dashboard_courses'))
+    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT id, student_name, student_surname, student_id, checkin_time, status FROM manual_checkin WHERE course_id=? AND status='pending'", 
-              (course_id,))
+    c.execute("""
+        SELECT id, student_name, student_surname, student_id, checkin_time, status 
+        FROM manual_checkin 
+        WHERE course_id=? AND status='pending'
+    """, (course_id,))
     pending = c.fetchall()
     conn.close()
 
-    return render_template('manual_checkins.html', course_id=course_id, course_name=courses[course_id], pending=pending)
+    return render_template('manual_checkins.html', 
+                          course_id=course_id, 
+                          course_name=courses[course_id], 
+                          pending=pending)
 
 @app.route('/manual_checkin_action/<int:checkin_id>/<action>')
 @login_required
@@ -362,9 +440,11 @@ def manual_checkin_action(checkin_id, action):
         row = c.fetchone()
         if row:
             course_id, student_name, student_surname, student_id, checkin_time = row
-            # Add to attendance with manual identifier
-            c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
-                      ('manual:' + student_id, course_id, checkin_time))
+            
+            # Add to attendance using student_id as user_id
+            add_attendance(student_id, course_id, checkin_time)
+            
+            # Update status to approved
             c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
     else:
         c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))

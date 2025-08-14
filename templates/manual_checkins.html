@@ -2,21 +2,104 @@
 <html>
 <head>
     <title>Pending Check-ins - {{ course_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .checkin-list {
+            margin-top: 20px;
+        }
+        .checkin-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+        .checkin-item strong {
+            color: #2c3e50;
+        }
+        .actions {
+            margin-top: 10px;
+        }
+        .actions a {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-right: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .approve {
+            background: #27ae60;
+            color: white;
+        }
+        .approve:hover {
+            background: #219653;
+        }
+        .reject {
+            background: #e74c3c;
+            color: white;
+        }
+        .reject:hover {
+            background: #c0392b;
+        }
+        .no-pending {
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <h1>Pending Manual Check-ins for {{ course_name }}</h1>
-    {% if pending %}
-        <ul>
-        {% for checkin in pending %}
-            <li>
-                {{ checkin[1] }} {{ checkin[2] }} (ID: {{ checkin[3] }}) at {{ checkin[4] }}
-                <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}">✅ Approve</a>
-                <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}">❌ Reject</a>
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>No pending check-ins.</p>
-    {% endif %}
+    <div class="container">
+        <a href="{{ url_for('dashboard_courses') }}" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Pending Manual Check-ins for {{ course_name }}</h1>
+        
+        {% if pending %}
+            <div class="checkin-list">
+                {% for checkin in pending %}
+                    <div class="checkin-item">
+                        <strong>{{ checkin[1] }} {{ checkin[2] }}</strong> (ID: {{ checkin[3] }})<br>
+                        Checked in at: {{ checkin[4] }}
+                        <div class="actions">
+                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}" class="approve">✅ Approve</a>
+                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}" class="reject">❌ Reject</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-pending">No pending check-ins for this course.</p>
+        {% endif %}
+    </div>
 </body>
 </html>

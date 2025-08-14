@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dashboard - DPFinal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-    <a href="{{ url_for('checkin_manual', course_id=course_id) }}">📋 Pending Check-ins</a>
-
 </head>
 <body>
+    <!-- Macro for subject cards - MOVED TO TOP -->
+    {% macro subject_card(name) %}
+    <div class="subject-card">
+        <h4>{{ name }}</h4>
+        <a href="{{ url_for('subject_attendance') }}?subject={{ name | urlencode }}" class="check-btn" role="button">Check</a>
+    </div>
+    {% endmacro %}
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -57,17 +63,31 @@
                 <span></span>
             </button>
             <h1>Welcome, {{ user.name }}!</h1>
+            
+            <!-- Course Selection for Pending Check-ins -->
+            <div class="course-selection">
+                <form method="GET" action="{{ url_for('dashboard_courses') }}">
+                    <select name="course_id">
+                        <option value="">-- Select Course --</option>
+                        {% for id, name in courses.items() %}
+                            <option value="{{ id }}" {% if id == selected_course_id %}selected{% endif %}>
+                                {{ name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Select</button>
+                </form>
+                
+                {% if selected_course_id %}
+                    <a href="{{ url_for('manual_checkins', course_id=selected_course_id) }}" class="pending-link">
+                        📋 View Pending Check-ins
+                    </a>
+                {% endif %}
+            </div>
         </header>
 
         <!-- Content Area -->
         <div class="content-area">
-            {% macro subject_card(name) %}
-            <div class="subject-card">
-                <h4>{{ name }}</h4>
-                <a href="{{ url_for('subject_attendance') }}?subject={{ name | urlencode }}" class="check-btn" role="button">Check</a>
-            </div>
-            {% endmacro %}
-
             {% if section == 'courses' %}
             <!-- Courses Section -->
             <section id="courses-section" class="content-section active">
@@ -79,14 +99,9 @@
                 <div class="year-section">
                     <h3 class="year-title">First Year</h3>
                     <div class="subjects-grid">
-                        {{ subject_card('Математика 1') }}
-                        {{ subject_card('Дигитална логика и системи') }}
-                        {{ subject_card('Структурирано програмирање') }}
-                        {{ subject_card('Апликативен софтвер') }}
-                        {{ subject_card('Математика 2') }}
-                        {{ subject_card('Архитектура и организација на компјутери') }}
-                        {{ subject_card('Веб технологии') }}
-                        {{ subject_card('Напредно програмирање') }}
+                        {% for id in range(1, 9) %}
+                            {{ subject_card(courses[id|string]) }}
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -94,14 +109,9 @@
                 <div class="year-section">
                     <h3 class="year-title">Second Year</h3>
                     <div class="subjects-grid">
-                        {{ subject_card('Системски софтвер') }}
-                        {{ subject_card('Податочни комуникации и мрежи') }}
-                        {{ subject_card('Алгоритми и структури на податоци') }}
-                        {{ subject_card('Објектно ориентирано програмирање') }}
-                        {{ subject_card('Бази на податоци') }}
-                        {{ subject_card('Компјутерска графика') }}
-                        {{ subject_card('Проектирање и менаџмент на компјутерски мрежи') }}
-                        {{ subject_card('Солид моделирање') }}
+                        {% for id in range(9, 17) %}
+                            {{ subject_card(courses[id|string]) }}
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -109,14 +119,9 @@
                 <div class="year-section">
                     <h3 class="year-title">Third Year</h3>
                     <div class="subjects-grid">
-                        {{ subject_card('Деловни информациски системи') }}
-                        {{ subject_card('Математичко моделирање и компјутерски симулации') }}
-                        {{ subject_card('Анализа и логички дизајн на информациски системи') }}
-                        {{ subject_card('Принципи на мултимедиски системи') }}
-                        {{ subject_card('Веб програмирање') }}
-                        {{ subject_card('Основи на вештачка интелигенција') }}
-                        {{ subject_card('Индустриска информатика') }}
-                        {{ subject_card('Неструктурирани бази на податоци') }}
+                        {% for id in range(17, 25) %}
+                            {{ subject_card(courses[id|string]) }}
+                        {% endfor %}
                     </div>
                 </div>
 
@@ -124,35 +129,18 @@
                 <div class="year-section">
                     <h3 class="year-title">Fourth Year</h3>
                     <div class="subjects-grid">
-                        {{ subject_card('Безбедност на компјутерски системи и мрежи') }}
-                        {{ subject_card('Роботика и автоматизација') }}
-                        {{ subject_card('Податочно рударење и аналитика на големи количества на податоци') }}
-                        {{ subject_card('Сервисно-ориентирани архитектури') }}
-                        {{ subject_card('Безжични комуникации') }}
-                        {{ subject_card('Бизнис интелигенција и системи за поддршка на одлучување') }}
-                        {{ subject_card('Програмирање за мобилни платформи') }}
-                        {{ subject_card('Системи базирани на знаење') }}
+                        {% for id in range(25, 33) %}
+                            {{ subject_card(courses[id|string]) }}
+                        {% endfor %}
                     </div>
 
                     <!-- Elective Subjects Section -->
                     <div class="elective-section">
                         <h4 class="elective-title">Elective Subjects</h4>
                         <div class="subjects-grid">
-                            {{ subject_card('Иновациски менаџмент') }}
-                            {{ subject_card('Финансиски технологии') }}
-                            {{ subject_card('Интелектуален капитал и конкурентност') }}
-                            {{ subject_card('е-влада и е-управување') }}
-                            {{ subject_card('Организациско однесување и развој') }}
-                            {{ subject_card('Англиски за специфични цели') }}
-                            {{ subject_card('Англиски јазик за основни вештини') }}
-                            {{ subject_card('Деловни комуникациски вештини') }}
-                            {{ subject_card('Економија и бизнис') }}
-                            {{ subject_card('Концепти на информатичко општество') }}
-                            {{ subject_card('Интернет банкарство') }}
-                            {{ subject_card('Организациско претприемништво') }}
-                            {{ subject_card('Криптографија и информациска безбедност') }}
-                            {{ subject_card('Комуникациски технологии') }}
-                            {{ subject_card('Обработка на природен јазик') }}
+                            {% for id in range(33, 48) %}
+                                {{ subject_card(courses[id|string]) }}
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -165,7 +153,7 @@
                     <h2>📊 Presence</h2>
                 </div>
                 <div id="presenceContent">
-                    <p>helow  a course and click "Check" on the Courses page to view attendance data here.</p>
+                    <p>Select a course and click "Check" on the Courses page to view attendance data here.</p>
                 </div>
             </section>
             {% endif %}
@@ -194,7 +182,5 @@
             sidebarOverlay.classList.remove('active');
         });
     </script>
-
-    
 </body>
 </html>
