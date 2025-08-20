@@ -8,7 +8,6 @@ import qrcode
 import io
 from datetime import datetime
 import sqlite3
-from collections import defaultdict
 import socket
 
 # ========================
@@ -117,10 +116,11 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, id, email, name):
+    def __init__(self, id, email, name, student_id=None):
         self.id = id
         self.email = email
         self.name = name
+        self.student_id = student_id
         self.is_professor = (email.lower() == PROFESSOR_EMAIL)
 
 users = {}
@@ -137,24 +137,30 @@ def get_current_user():
 # ========================
 DB_FILE = "attendance.db"
 
-def init_db():
+def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db_connection()
     c = conn.cursor()
     
-    # Create users table
+    # Users table
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     email TEXT,
-                    name TEXT
+                    name TEXT,
+                    student_id TEXT
                 )''')
     
-    # Create courses table
+    # Courses table
     c.execute('''CREATE TABLE IF NOT EXISTS courses (
                     id TEXT PRIMARY KEY,
                     name TEXT
                 )''')
     
-    # Create attendance table
+    # Attendance table
     c.execute('''CREATE TABLE IF NOT EXISTS attendance (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT,
@@ -162,7 +168,7 @@ def init_db():
                     checkin_time TEXT
                 )''')
     
-    # Create manual_checkin table
+    # Manual checkin table
     c.execute('''CREATE TABLE IF NOT EXISTS manual_checkin (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     course_id TEXT,
@@ -173,7 +179,7 @@ def init_db():
                     status TEXT DEFAULT 'pending'
                 )''')
     
-    # Create professor_data table
+    # Professor data table
     c.execute('''CREATE TABLE IF NOT EXISTS professor_data (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     course_id TEXT,
@@ -183,75 +189,70 @@ def init_db():
                     status TEXT
                 )''')
     
-    # Insert courses if not exists
+    # Insert courses
     for cid, cname in all_courses.items():
         c.execute("INSERT OR IGNORE INTO courses (id, name) VALUES (?, ?)", (cid, cname))
     
     conn.commit()
     conn.close()
 
-def add_user(user_id, email, name):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""INSERT OR IGNORE INTO users (id, email, name) 
-                 VALUES (?, ?, ?)""", 
-              (user_id, email, name))
-    conn.commit()
-    conn.close()
+def add_user(user_id, email, name, student_id=None):
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT OR IGNORE INTO users (id, email, name, student_id)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, email, name, student_id))
+        conn.commit()
 
-def add_attendance(student_id, course_id, checkin_time):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
-              (student_id, course_id, checkin_time))
-    conn.commit()
-    conn.close()
+def add_attendance(user_id, course_id, checkin_time):
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO attendance (user_id, course_id, checkin_time)
+            VALUES (?, ?, ?)
+        """, (user_id, course_id, checkin_time))
+        conn.commit()
 
 def add_to_professor_db(course_id, student_id, student_name, checkin_time, status):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO professor_data (course_id, student_id, student_name, checkin_time, status) VALUES (?, ?, ?, ?, ?)",
-        (course_id, student_id, student_name, checkin_time, status)
-    )
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO professor_data (course_id, student_id, student_name, checkin_time, status)
+            VALUES (?, ?, ?, ?, ?)
+        """, (course_id, student_id, student_name, checkin_time, status))
+        conn.commit()
 
 def add_manual_checkin(course_id, student_name, student_surname, student_id, checkin_time):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO manual_checkin (course_id, student_name, student_surname, student_id, checkin_time) VALUES (?, ?, ?, ?, ?)",
-        (course_id, student_name, student_surname, student_id, checkin_time)
-    )
-    conn.commit()
-    conn.close()
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO manual_checkin (course_id, student_name, student_surname, student_id, checkin_time)
+            VALUES (?, ?, ?, ?, ?)
+        """, (course_id, student_name, student_surname, student_id, checkin_time))
+        conn.commit()
 
 def get_pending_checkins():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        SELECT id, course_id, student_name, student_surname, student_id, checkin_time 
-        FROM manual_checkin 
-        WHERE status='pending'
-    """)
-    pending = c.fetchall()
-    conn.close()
-    return pending
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, course_id, student_name, student_surname, student_id, checkin_time
+            FROM manual_checkin
+            WHERE status='pending'
+        """)
+        return c.fetchall()
 
 def get_attendance_by_course(course_id):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        SELECT a.id, u.name, u.student_id, a.checkin_time
-        FROM attendance a
-        JOIN users u ON a.user_id = u.id
-        WHERE a.course_id = ?
-        ORDER BY a.checkin_time DESC
-    """, (course_id,))
-    attendance = c.fetchall()
-    conn.close()
-    return attendance
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("""
+            SELECT a.id, u.name, u.student_id, a.checkin_time
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.course_id = ?
+            ORDER BY a.checkin_time DESC
+        """, (course_id,))
+        return c.fetchall()
 
 # ========================
 # ROUTES
@@ -268,7 +269,7 @@ def google_login():
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
-@app.route('/callback')
+@app.route('/callback', methods=['GET'])
 def google_callback():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
@@ -310,6 +311,7 @@ def course_attendance(course_id):
     
     attendance = get_attendance_by_course(course_id)
     
+   
     return render_template('course_attendance.html',
                            user=current_user,
                            course_id=course_id,
@@ -342,7 +344,7 @@ def checkin_manual(course_id):
         return "Invalid course ID", 400
 
     success = False
-    
+
     if request.method == 'POST':
         student_name = request.form.get('student_name')
         student_surname = request.form.get('student_surname')
@@ -353,8 +355,23 @@ def checkin_manual(course_id):
             return redirect(request.url)
 
         now = datetime.now()
+        if current_user.is_authenticated:
+            add_user(current_user.id, current_user.email, current_user.name, student_id)
+        else:
+            temp_id = f"manual_{student_id}"
+            add_user(temp_id, None, f"{student_name} {student_surname}", student_id)
+
         add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
+
+        session['last_manual_checkin'] = {'student_id': student_id, 'course_id': course_id}
         success = True
+
+    last = session.get('last_manual_checkin')
+    if last and last.get('course_id') == course_id:
+        success = True
+    else:
+        success = False
+        session.pop('last_manual_checkin', None)
 
     return render_template('manual_checkin.html', 
                            course_name=all_courses[course_id], 
@@ -382,7 +399,6 @@ def generate_qr(course_id):
 @login_required
 def manual_checkins():
     pending = get_pending_checkins()
-    
     return render_template('manual_checkins.html',
                            user=current_user,
                            pending=pending,
@@ -394,29 +410,26 @@ def manual_checkin_action(checkin_id, action):
     if action not in ['approve', 'reject']:
         return "Invalid action", 400
 
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT course_id, student_name, student_surname, student_id, checkin_time FROM manual_checkin WHERE id=?", (checkin_id,))
-    row = c.fetchone()
-    
-    if not row:
-        conn.close()
-        return "Check-in record not found", 404
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute("SELECT course_id, student_name, student_surname, student_id, checkin_time FROM manual_checkin WHERE id=?", (checkin_id,))
+        row = c.fetchone()
         
-    course_id, student_name, student_surname, student_id, checkin_time = row
-    
-    if action == 'approve':
-        add_attendance(student_id, course_id, checkin_time)
+        if not row:
+            return "Check-in record not found", 404
+            
+        course_id, student_name, student_surname, student_id, checkin_time = row
+        
         full_name = f"{student_name} {student_surname}"
-        add_to_professor_db(course_id, student_id, full_name, checkin_time, "approved")
-        c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
-    else:
-        full_name = f"{student_name} {student_surname}"
-        add_to_professor_db(course_id, student_id, full_name, checkin_time, "rejected")
-        c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))
+        if action == 'approve':
+            add_attendance(student_id, course_id, checkin_time)
+            add_to_professor_db(course_id, student_id, full_name, checkin_time, "approved")
+            c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
+        else:
+            add_to_professor_db(course_id, student_id, full_name, checkin_time, "rejected")
+            c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))
+        conn.commit()
 
-    conn.commit()
-    conn.close()
     return redirect(url_for('manual_checkins'))
 
 # ========================

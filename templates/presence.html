@@ -82,7 +82,7 @@
                         </form>
 
                         <div id="qrCodeContainer">
-                            <img id="qrCodeImage" src="" alt="QR Code" />
+                            <img id="qrCodeImage" src="" alt="QR Code" style="display:none;" />
                         </div>
                     </div>
                 </div>
@@ -119,13 +119,14 @@
             const masterKey = document.getElementById('masterKey').value;
             const qrImage = document.getElementById('qrCodeImage');
 
+            // Send master key in query for backend validation
             qrImage.src = `/generate_qr/${courseId}?key=${encodeURIComponent(masterKey)}`;
             qrImage.style.display = 'block';
         });
 
         // QR code image error handler
         document.getElementById('qrCodeImage').addEventListener('error', function() {
-            alert('Failed to load QR code. Please try again.');
+            alert('Failed to load QR code. Invalid master key or course.');
             this.style.display = 'none';
         });
     </script>
