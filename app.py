@@ -242,13 +242,18 @@ def get_pending_checkins():
         """)
         return c.fetchall()
 
+# get_attendance_by_course function in app.py
 def get_attendance_by_course(course_id):
     with get_db_connection() as conn:
         c = conn.cursor()
         c.execute("""
-            SELECT a.id, u.name, u.student_id, a.checkin_time
+            SELECT a.id, 
+                   COALESCE(u.name, pd.student_name) as student_name,
+                   COALESCE(u.student_id, pd.student_id) as student_id,
+                   a.checkin_time
             FROM attendance a
-            JOIN users u ON a.user_id = u.id
+            LEFT JOIN users u ON a.user_id = u.id
+            LEFT JOIN professor_data pd ON a.user_id = pd.student_id AND a.course_id = pd.course_id
             WHERE a.course_id = ?
             ORDER BY a.checkin_time DESC
         """, (course_id,))
