@@ -10,7 +10,7 @@ from datetime import datetime
 import sqlite3
 from collections import defaultdict
 import socket
-from flask import jsonify
+
 # ========================
 # CONFIG
 # ========================
@@ -22,55 +22,71 @@ hostname = socket.gethostname()
 local_ip = socket.gethostbyname(hostname)
 BASE_URL = os.getenv("BASE_URL", f"http://{local_ip}:5000")
 
-courses = {
-    '1': 'Математика 1',
-    '2': 'Дигитална логика и системи',
-    '3': 'Структурирано програмирање',
-    '4': 'Апликативен софтвер',
-    '5': 'Математика 2',
-    '6': 'Архитектура и организација на компјутери',
-    '7': 'Веб технологии',
-    '8': 'Напредно програмирање',
-    '9': 'Системски софтвер',
-    '10': 'Податочни комуникации и мрежи',
-    '11': 'Алгоритми и структури на податоци',
-    '12': 'Објектно ориентирано програмирање',
-    '13': 'Бази на податоци',
-    '14': 'Компјутерска графика',
-    '15': 'Проектирање и менаџмент на компјутерски мрежи',
-    '16': 'Солид моделирање',
-    '17': 'Деловни информациски системи',
-    '18': 'Математичко моделирање и компјутерски симулации',
-    '19': 'Анализа и логички дизајн на информациски системи',
-    '20': 'Принципи на мултимедиски системи',
-    '21': 'Веб програмирање',
-    '22': 'Основи на вештачка интелигенција',
-    '23': 'Индустриска информатика',
-    '24': 'Неструктурирани бази на податоци',
-    '25': 'Безбедност на компјутерски системи и мрежи',
-    '26': 'Роботика и автоматизација',
-    '27': 'Податочно рударење и аналитика на големи количества на податоци',
-    '28': 'Сервисно-ориентирани архитектури',
-    '29': 'Безжични комуникации',
-    '30': 'Бизнис интелигенција и системи за поддршка на одлучување',
-    '31': 'Програмирање за мобилни платформи',
-    '32': 'Системи базирани на знаење',
-    '33': 'Иновациски менаџмент',
-    '34': 'Финансиски технологии',
-    '35': 'Интелектуален капитал и конкурентност',
-    '36': 'е-влада и е-управување',
-    '37': 'Организациско однесување и развој',
-    '38': 'Англиски за специфични цели',
-    '39': 'Англиски јазик за основни вештини',
-    '40': 'Деловни комуникациски вештини',
-    '41': 'Економија и бизнис',
-    '42': 'Концепти на информатичко општество',
-    '43': 'Интернет банкарство',
-    '44': 'Организациско претприемништво',
-    '45': 'Криптографија и информациска безбедност',
-    '46': 'Комуникациски технологии',
-    '47': 'Обработка на природен јазик'
+# Courses organized by year
+courses_by_year = {
+    '1st Year': {
+        '1': 'Математика 1',
+        '2': 'Дигитална логика и системи',
+        '3': 'Структурирано програмирање',
+        '4': 'Апликативен софтвер',
+        '5': 'Математика 2',
+        '6': 'Архитектура и организација на компјутери',
+        '7': 'Веб технологии',
+        '8': 'Напредно програмирање'
+    },
+    '2nd Year': {
+        '9': 'Системски софтвер',
+        '10': 'Податочни комуникации и мрежи',
+        '11': 'Алгоритми и структури на податоци',
+        '12': 'Објектно ориентирано програмирање',
+        '13': 'Бази на податоци',
+        '14': 'Компјутерска графика',
+        '15': 'Проектирање и менаџмент на компјутерски мрежи',
+        '16': 'Солид моделирање'
+    },
+    '3rd Year': {
+        '17': 'Деловни информациски системи',
+        '18': 'Математичко моделирање и компјутерски симулации',
+        '19': 'Анализа и логички дизајн на информациски системи',
+        '20': 'Принципи на мултимедиски системи',
+        '21': 'Веб програмирање',
+        '22': 'Основи на вештачка интелигенција',
+        '23': 'Индустриска информатика',
+        '24': 'Неструктурирани бази на податоци'
+    },
+    '4th Year': {
+        '25': 'Безбедност на компјутерски системи и мрежи',
+        '26': 'Роботика и автоматизација',
+        '27': 'Податочно рударење и аналитика на големи количества на податоци',
+        '28': 'Сервисно-ориентирани архитектури',
+        '29': 'Безжични комуникации',
+        '30': 'Бизнис интелигенција и системи за поддршка на одлучување',
+        '31': 'Програмирање за мобилни платформи',
+        '32': 'Системи базирани на знаење'
+    },
+    'Electives': {
+        '33': 'Иновациски менаџмент',
+        '34': 'Финансиски технологии',
+        '35': 'Интелектуален капитал и конкурентност',
+        '36': 'е-влада и е-управување',
+        '37': 'Организациско однесување и развој',
+        '38': 'Англиски за специфични цели',
+        '39': 'Англиски јазик за основни вештини',
+        '40': 'Деловни комуникациски вештини',
+        '41': 'Економија и бизнис',
+        '42': 'Концепти на информатичко општество',
+        '43': 'Интернет банкарство',
+        '44': 'Организациско претприемништво',
+        '45': 'Криптографија и информациска безбедност',
+        '46': 'Комуникациски технологии',
+        '47': 'Обработка на природен јазик'
+    }
 }
+
+# Flattened courses for other functions
+all_courses = {}
+for year_courses in courses_by_year.values():
+    all_courses.update(year_courses)
 
 # ========================
 # GLOBALS
@@ -105,7 +121,6 @@ class User(UserMixin):
         self.id = id
         self.email = email
         self.name = name
-        self.student_id = None
         self.is_professor = (email.lower() == PROFESSOR_EMAIL)
 
 users = {}
@@ -130,8 +145,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     email TEXT,
-                    name TEXT,
-                    student_id TEXT
+                    name TEXT
                 )''')
     
     # Create courses table
@@ -142,13 +156,11 @@ def init_db():
     
     # Create attendance table
     c.execute('''CREATE TABLE IF NOT EXISTS attendance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT,
-                student_name TEXT,
-                course_id TEXT,
-                checkin_time TEXT
-            )''')
-
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT,
+                    course_id TEXT,
+                    checkin_time TEXT
+                )''')
     
     # Create manual_checkin table
     c.execute('''CREATE TABLE IF NOT EXISTS manual_checkin (
@@ -172,31 +184,28 @@ def init_db():
                 )''')
     
     # Insert courses if not exists
-    for cid, cname in courses.items():
+    for cid, cname in all_courses.items():
         c.execute("INSERT OR IGNORE INTO courses (id, name) VALUES (?, ?)", (cid, cname))
     
     conn.commit()
     conn.close()
 
-def add_user(user_id, email, name, student_id):
+def add_user(user_id, email, name):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("""INSERT OR IGNORE INTO users (id, email, name, student_id) 
-                 VALUES (?, ?, ?, ?)""", 
-              (user_id, email, name, student_id))
+    c.execute("""INSERT OR IGNORE INTO users (id, email, name) 
+                 VALUES (?, ?, ?)""", 
+              (user_id, email, name))
     conn.commit()
     conn.close()
 
-def add_attendance(user_id, course_id, checkin_time, student_name=None):
+def add_attendance(student_id, course_id, checkin_time):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute(
-        "INSERT INTO attendance (user_id, course_id, checkin_time, student_name) VALUES (?, ?, ?, ?)",
-        (user_id, course_id, checkin_time, student_name)
-    )
+    c.execute("INSERT INTO attendance (user_id, course_id, checkin_time) VALUES (?, ?, ?)",
+              (student_id, course_id, checkin_time))
     conn.commit()
     conn.close()
-
 
 def add_to_professor_db(course_id, student_id, student_name, checkin_time, status):
     conn = sqlite3.connect(DB_FILE)
@@ -218,32 +227,6 @@ def add_manual_checkin(course_id, student_name, student_surname, student_id, che
     conn.commit()
     conn.close()
 
-def get_professor_data():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        SELECT course_id, student_id, student_name, checkin_time, status 
-        FROM professor_data
-        ORDER BY checkin_time DESC
-    """)
-    data = c.fetchall()
-    conn.close()
-    
-    professor_data = []
-    for row in data:
-        course_id, student_id, student_name, checkin_time, status = row
-        course_name = courses.get(course_id, f"Unknown Course ({course_id})")
-        professor_data.append({
-            'course_id': course_id,
-            'course_name': course_name,
-            'student_id': student_id,
-            'student_name': student_name,
-            'checkin_time': checkin_time,
-            'status': status
-        })
-    
-    return professor_data
-
 def get_pending_checkins():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -259,58 +242,16 @@ def get_pending_checkins():
 def get_attendance_by_course(course_id):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-
-    # Fetch regular attendance
     c.execute("""
         SELECT a.id, u.name, u.student_id, a.checkin_time
         FROM attendance a
         JOIN users u ON a.user_id = u.id
         WHERE a.course_id = ?
-    """, (course_id,))
-    regular_attendance = c.fetchall()
-
-    # Fetch approved manual check-ins
-    c.execute("""
-        SELECT id, student_name || ' ' || student_surname AS full_name, student_id, checkin_time
-        FROM manual_checkin
-        WHERE course_id = ? AND status='approved'
-    """, (course_id,))
-    manual_attendance = c.fetchall()
-
-    conn.close()
-
-    # Combine both lists
-    combined = list(regular_attendance) + list(manual_attendance)
-
-    # Sort by check-in time descending
-    combined.sort(key=lambda x: x[3], reverse=True)
-
-    return combined
-
-
-
-def get_student_attendance(student_id):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        SELECT a.course_id, c.name, a.checkin_time
-        FROM attendance a
-        JOIN courses c ON a.course_id = c.id
-        WHERE a.user_id = ?
         ORDER BY a.checkin_time DESC
-    """, (student_id,))
+    """, (course_id,))
     attendance = c.fetchall()
     conn.close()
-    
-    # Group by course
-    attendance_by_course = defaultdict(list)
-    for course_id, course_name, checkin_time in attendance:
-        attendance_by_course[course_id].append({
-            'course_name': course_name,
-            'checkin_time': checkin_time
-        })
-    
-    return attendance_by_course
+    return attendance
 
 # ========================
 # ROUTES
@@ -319,9 +260,7 @@ def get_student_attendance(student_id):
 @app.route('/login')
 def login():
     if current_user.is_authenticated:
-        if current_user.is_professor:
-            return redirect(url_for('professor_dashboard'))
-        return redirect(url_for('dashboard_courses'))
+        return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 @app.route('/auth/google')
@@ -347,16 +286,11 @@ def google_callback():
         user = User(user_id, email, name)
         user.is_professor = (email == PROFESSOR_EMAIL)
         
-        if not user.is_professor:
-            user.student_id = email.split('@')[0].lower()
-        
         users[user_id] = user
-        add_user(user_id, email, name, user.student_id if hasattr(user, 'student_id') else None)
+        add_user(user_id, email, name)
         login_user(user)
         
-        if user.is_professor:
-            return redirect(url_for('professor_dashboard'))
-        return redirect(url_for('dashboard_courses'))
+        return redirect(url_for('dashboard'))
 
     flash('Login failed. Please try again.', 'error')
     return redirect(url_for('login'))
@@ -364,97 +298,30 @@ def google_callback():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return redirect(url_for('dashboard_courses'))
-
-@app.route('/dashboard/courses')
-@login_required
-def dashboard_courses():
-    if current_user.is_professor:
-        # Professor sees all courses
-        courses_list = [{'id': cid, 'name': cname} for cid, cname in courses.items()]
-    else:
-        # Student sees courses they've attended
-        attendance = get_student_attendance(current_user.id)
-        courses_list = []
-        for course_id, records in attendance.items():
-            if records:
-                courses_list.append({
-                    'id': course_id,
-                    'name': records[0]['course_name']
-                })
-    
     return render_template('dashboard.html', 
-                          user=current_user, 
-                          courses=courses_list,
-                          section='courses')
+                          user=current_user,
+                          courses_by_year=courses_by_year)
 
 @app.route('/course/<course_id>')
 @login_required
 def course_attendance(course_id):
-    if course_id not in courses:
+    if course_id not in all_courses:
         abort(404, description="Course not found")
+    
+    attendance = get_attendance_by_course(course_id)
+    
+    return render_template('course_attendance.html',
+                           user=current_user,
+                           course_id=course_id,
+                           course_name=all_courses[course_id],
+                           attendance=attendance)
 
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-
-    if current_user.is_professor:
-        # Professor sees all attendance for the course (regular + approved manual)
-        c.execute("""
-            SELECT a.id, u.name, u.student_id, a.checkin_time
-            FROM attendance a
-            JOIN users u ON a.user_id = u.id
-            WHERE a.course_id = ?
-            ORDER BY a.checkin_time DESC
-        """, (course_id,))
-        regular = c.fetchall()
-
-        # Include approved manual check-ins
-        c.execute("""
-            SELECT id, student_name || ' ' || student_surname AS name, student_id, checkin_time
-            FROM manual_checkin
-            WHERE course_id = ? AND status='approved'
-            ORDER BY checkin_time DESC
-        """, (course_id,))
-        manual = c.fetchall()
-
-        # Combine both
-        attendance = regular + manual
-
-        conn.close()
-        return render_template('course_attendance.html',
-                               user=current_user,
-                               course_id=course_id,
-                               course_name=courses[course_id],
-                               attendance=attendance)
-    else:
-        # Student sees only their own attendance (regular + approved manual)
-        c.execute("""
-            SELECT a.id, u.name, u.student_id, a.checkin_time
-            FROM attendance a
-            JOIN users u ON a.user_id = u.id
-            WHERE a.user_id = ? AND a.course_id = ?
-            ORDER BY a.checkin_time DESC
-        """, (current_user.id, course_id))
-        regular = c.fetchall()
-
-        c.execute("""
-            SELECT id, student_name || ' ' || student_surname AS name, student_id, checkin_time
-            FROM manual_checkin
-            WHERE student_id = ? AND course_id = ? AND status='approved'
-            ORDER BY checkin_time DESC
-        """, (current_user.student_id, course_id))
-        manual = c.fetchall()
-
-        attendance = regular + manual
-
-        conn.close()
-        return render_template('course_attendance_student.html',
-                               user=current_user,
-                               course_id=course_id,
-                               course_name=courses[course_id],
-                               attendance=attendance)
-
-
+@app.route('/presence')
+@login_required
+def presence():
+    return render_template('presence.html',
+                           user=current_user,
+                           courses=all_courses)
 
 @app.route('/logout')
 @login_required
@@ -463,56 +330,44 @@ def logout():
     return redirect(url_for('login'))
 
 # ========================
-# PROFESSOR ROUTES
+# MANUAL CHECK-IN ROUTES
 # ========================
-@app.route('/professor')
-@login_required
-def professor_dashboard():
-    if not current_user.is_professor:
-        abort(403)
-    
-    pending = get_pending_checkins()
-    
-    return render_template('professor_dashboard.html', 
-                          user=current_user,
-                          pending=pending,
-                          courses=courses)
+@app.route('/checkin/<course_id>')
+def checkin_redirect(course_id):
+    return redirect(url_for('checkin_manual', course_id=course_id))
 
-@app.route('/professor/manual_checkins/<course_id>')
-@login_required
-def professor_manual_checkins(course_id):
-    if not current_user.is_professor:
-        abort(403)
+@app.route('/checkin_manual/<course_id>', methods=['GET', 'POST'])
+def checkin_manual(course_id):
+    if course_id not in all_courses:
+        return "Invalid course ID", 400
+
+    success = False
     
-    if course_id not in courses:
-        abort(404, description="Course not found")
-    
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("""
-        SELECT id, student_name, student_surname, student_id, checkin_time 
-        FROM manual_checkin 
-        WHERE course_id = ? AND status='pending'
-    """, (course_id,))
-    pending = c.fetchall()
-    conn.close()
-    
-    return render_template('manual_checkins.html',
-                           user=current_user,
+    if request.method == 'POST':
+        student_name = request.form.get('student_name')
+        student_surname = request.form.get('student_surname')
+        student_id = request.form.get('student_id')
+
+        if not all([student_name, student_surname, student_id]):
+            flash("Please fill in all fields.", "error")
+            return redirect(request.url)
+
+        now = datetime.now()
+        add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
+        success = True
+
+    return render_template('manual_checkin.html', 
+                           course_name=all_courses[course_id], 
                            course_id=course_id,
-                           course_name=courses[course_id],
-                           pending=pending)
+                           success=success)
 
 # ========================
-# QR CODE & CHECK-IN ROUTES
+# QR CODE & APPROVAL ROUTES
 # ========================
 @app.route('/generate_qr/<course_id>')
 @login_required
 def generate_qr(course_id):
-    if not current_user.is_professor:
-        abort(403)
-        
-    if course_id not in courses:
+    if course_id not in all_courses:
         return f"Invalid course ID: {course_id}", 404
 
     check_in_url = f"{BASE_URL}/checkin/{course_id}"
@@ -523,45 +378,25 @@ def generate_qr(course_id):
     buf.seek(0)
     return send_file(buf, mimetype='image/png')
 
-@app.route('/checkin/<course_id>')
+@app.route('/manual_checkins')
 @login_required
-def checkin(course_id):
-    if current_user.is_professor:
-        return "Professors cannot check-in", 403
+def manual_checkins():
+    pending = get_pending_checkins()
     
-    now = datetime.now()
-    
-    # Check cooldown
-    key = (current_user.id, course_id)
-    last_checkin = checkin_cooldowns.get(key)
-    if last_checkin and (now - last_checkin).total_seconds() < 60:  # 60s cooldown
-        return "Please wait before checking in again", 429
-    
-    checkin_time = now.strftime("%Y-%m-%d %H:%M:%S")
-    add_attendance(current_user.id, course_id, checkin_time, student_name=current_user.name)
-    checkin_cooldowns[key] = now
-    
-    return f"Checked in successfully at {checkin_time}!"
+    return render_template('manual_checkins.html',
+                           user=current_user,
+                           pending=pending,
+                           courses=all_courses)
 
-# ========================
-# MANUAL CHECK-IN ACTION
-# ========================
 @app.route('/manual_checkin_action/<int:checkin_id>/<action>')
 @login_required
 def manual_checkin_action(checkin_id, action):
-    if not current_user.is_professor:
-        abort(403)
-        
     if action not in ['approve', 'reject']:
         return "Invalid action", 400
 
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("""
-        SELECT course_id, student_name, student_surname, student_id, checkin_time 
-        FROM manual_checkin 
-        WHERE id=?
-    """, (checkin_id,))
+    c.execute("SELECT course_id, student_name, student_surname, student_id, checkin_time FROM manual_checkin WHERE id=?", (checkin_id,))
     row = c.fetchone()
     
     if not row:
@@ -569,26 +404,35 @@ def manual_checkin_action(checkin_id, action):
         return "Check-in record not found", 404
         
     course_id, student_name, student_surname, student_id, checkin_time = row
-    full_name = f"{student_name} {student_surname}"
     
     if action == 'approve':
-        # Add to attendance table **with full name**
-        add_attendance(student_id, course_id, checkin_time, student_name=full_name)
+        add_attendance(student_id, course_id, checkin_time)
+        full_name = f"{student_name} {student_surname}"
         add_to_professor_db(course_id, student_id, full_name, checkin_time, "approved")
         c.execute("UPDATE manual_checkin SET status='approved' WHERE id=?", (checkin_id,))
     else:
+        full_name = f"{student_name} {student_surname}"
         add_to_professor_db(course_id, student_id, full_name, checkin_time, "rejected")
         c.execute("UPDATE manual_checkin SET status='rejected' WHERE id=?", (checkin_id,))
 
     conn.commit()
     conn.close()
-    
-    return redirect(url_for('course_attendance', course_id=course_id))
-
+    return redirect(url_for('manual_checkins'))
 
 # ========================
-# INIT
+# ERROR HANDLERS
 # ========================
-if __name__ == "__main__":
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
+
+# ========================
+# RUN
+# ========================
+if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

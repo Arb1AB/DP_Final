@@ -4,75 +4,115 @@
     <meta charset="UTF-8">
     <title>Attendance - {{ course_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-        }
-        th {
-            background-color: #3498db;
-            color: white;
-        }
-        tr:hover {
-            background-color: #f5f5f5;
-        }
-        .manual {
-            background-color: #fff3cd; /* light yellow for manual check-ins */
-        }
-        .status-present {
-            color: #27ae60;
-            font-weight: bold;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Attendance for "{{ course_name }}"</h1>
-        <a href="{{ url_for('dashboard_courses') }}">&larr; Back to Courses</a>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Student ID</th>
-                    <th>Check-in Time</th>
-                    <th>Type</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in attendance %}
-                <tr class="{% if record[0] in [m.id for m in record if 'manual' in record[3]|default('')] %}manual{% endif %}">
-                    <td>{{ record[1] }}</td>
-                    <td>{{ record[2] }}</td>
-                    <td>{{ record[3] }}</td>
-                    <td>{% if record[0]|string in manual_ids|default([]) %}Manual{% else %}Regular{% endif %}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>DPFinal</h2>
+            <button class="close-btn" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('dashboard') }}" class="nav-item">
+                            <span class="nav-icon">📚</span>
+                            <span class="nav-text">Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('presence') }}" class="nav-item">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Presence</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('manual_checkins') }}" class="nav-item">
+                            <span class="nav-icon">✅</span>
+                            <span class="nav-text">Pending Check-ins</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <p><strong>{{ user.name }}</strong></p>
+                <p class="user-email">{{ user.email }}</p>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
     </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-content">
+        <header class="top-header">
+            <button class="menu-btn" id="menuBtn">
+                <span></span><span></span><span></span>
+            </button>
+            <h1>Attendance - {{ course_name }}</h1>
+        </header>
+
+        <div class="content-area">
+            <a href="{{ url_for('dashboard') }}" class="back-link">&larr; Back to Courses</a>
+            
+            <div class="attendance-container">
+                <div class="attendance-header">
+                    <h2>{{ course_name }} Attendance</h2>
+                    <span>Total Records: {{ attendance|length }}</span>
+                </div>
+                
+                {% if attendance %}
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th>Check-in Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance %}
+                                <tr>
+                                    <td>{{ record[1] }}</td>
+                                    <td>{{ record[2] }}</td>
+                                    <td>{{ record[3] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="no-records">
+                        <p>No attendance records found for this course.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar toggle handlers
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const menuBtn = document.getElementById('menuBtn');
+
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        });
+
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    </script>
 </body>
 </html>

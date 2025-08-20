@@ -96,70 +96,6 @@ body {
 }
 
 /* ----------------------------- */
-/* Attendance Page Styles */
-/* ----------------------------- */
-
-body.attendance-page {
-    background: #f5f5f5;
-    color: #333;
-    display: block;
-    margin: 2rem;
-}
-
-.attendance-page header {
-    margin-bottom: 2rem;
-}
-
-.attendance-page h1 {
-    font-size: 1.8rem;
-    color: #2c3e50;
-}
-
-.attendance-page table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-
-.attendance-page th, .attendance-page td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #ddd;
-    text-align: left;
-}
-
-.attendance-page th {
-    background-color: #3498db;
-    color: white;
-}
-
-.attendance-page tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-
-.attendance-page .status-present {
-    color: #27ae60;
-    font-weight: bold;
-}
-
-.attendance-page .status-absent {
-    color: #e74c3c;
-    font-weight: bold;
-}
-
-.attendance-page a.back-link {
-    display: inline-block;
-    margin-top: 1rem;
-    text-decoration: none;
-    color: #3498db;
-    font-weight: bold;
-}
-
-.attendance-page a.back-link:hover {
-    text-decoration: underline;
-}
-
-/* ----------------------------- */
 /* Dashboard Styles */
 /* ----------------------------- */
 
@@ -248,6 +184,15 @@ body.attendance-page {
     border-left-color: #3498db;
 }
 
+.nav-icon {
+    margin-right: 15px;
+    font-size: 20px;
+}
+
+.nav-text {
+    font-weight: 500;
+}
+
 .sidebar-footer {
     padding: 20px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -256,6 +201,11 @@ body.attendance-page {
 .user-info p {
     margin: 5px 0;
     color: #ecf0f1;
+}
+
+.user-email {
+    font-size: 14px;
+    opacity: 0.8;
 }
 
 .logout-btn {
@@ -274,6 +224,24 @@ body.attendance-page {
     background: #c0392b;
 }
 
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
 .main-content {
     margin-left: 0;
     min-height: 100vh;
@@ -288,6 +256,15 @@ body.attendance-page {
     flex-wrap: wrap;
     gap: 15px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.menu-btn {
+    display: flex;
+    flex-direction: column;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
 }
 
 .menu-btn span {
@@ -309,6 +286,14 @@ body.attendance-page {
     padding: 30px;
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.content-section {
+    display: none;
+}
+
+.content-section.active {
+    display: block;
 }
 
 .section-header {
@@ -366,6 +351,10 @@ body.attendance-page {
     font-weight: 600;
 }
 
+.subject-card.elective {
+    border: 2px dashed #f39c12;
+}
+
 .check-btn {
     background: #3498db;
     color: white;
@@ -375,6 +364,8 @@ body.attendance-page {
     cursor: pointer;
     font-weight: 500;
     transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .check-btn:hover {
@@ -385,110 +376,236 @@ body.attendance-page {
     background: #27ae60 !important;
 }
 
-.elective-section {
-    margin-top: 30px;
-}
+/* ----------------------------- */
+/* Presence Page Styles */
+/* ----------------------------- */
 
-.elective-title {
-    font-size: 20px;
-    color: #ecf0f1;
-    margin-bottom: 15px;
-    border-left: 3px solid #f39c12;
-    padding-left: 8px;
-}
-
-.subject-card.elective {
-    border: 2px dashed #f39c12;
-}
-
-.presence-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.presence-table {
+.qr-generation {
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
     padding: 25px;
+    border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    overflow-x: auto;
+    margin-top: 30px;
+    max-width: 500px;
+    margin: 0 auto;
 }
 
-.presence-table th,
-.presence-table td {
-    padding: 15px;
-    text-align: left;
-    border-bottom: 1px solid #ecf0f1;
-}
-
-.presence-table th {
-    background: #f8f9fa;
+.qr-generation h3 {
+    margin-bottom: 20px;
     color: #2c3e50;
-    font-weight: 600;
-    font-size: 14px;
+    text-align: center;
 }
 
-.status {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
+.qr-generation label {
+    display: block;
+    margin-bottom: 8px;
     font-weight: 500;
+    color: #2c3e50;
 }
 
-.status.present {
-    background: #d5f4e6;
-    color: #27ae60;
-}
-
-.status.absent {
-    background: #fdeaea;
-    color: #e74c3c;
-}
-
-/* Course Selection */
-.course-selection {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.course-selection form {
-    display: flex;
-    gap: 10px;
-}
-
-.course-selection select {
-    padding: 8px 12px;
-    border-radius: 4px;
+.qr-generation select, .qr-generation input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
     border: 1px solid #ddd;
-    background: white;
+    border-radius: 8px;
+    font-size: 16px;
 }
 
-.course-selection button {
-    padding: 8px 12px;
+.qr-generation button {
     background: #3498db;
     color: white;
     border: none;
-    border-radius: 4px;
+    padding: 12px 20px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-.pending-link {
-    background: #4CAF50;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 4px;
-    text-decoration: none;
+.qr-generation button:hover {
+    background: #2980b9;
+}
+
+#qrCodeContainer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+#qrCodeImage {
+    max-width: 300px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    display: none;
+}
+
+/* ----------------------------- */
+/* Course Attendance Page Styles */
+/* ----------------------------- */
+
+.attendance-container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.attendance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.back-link {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    text-decoration: none;
+    color: #3498db;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.attendance-table th, .attendance-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.attendance-table th {
+    background-color: #3498db;
+    color: white;
+    font-weight: 600;
+}
+
+.attendance-table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.no-records {
+    text-align: center;
+    padding: 30px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+/* ----------------------------- */
+/* Manual Check-in Page Styles */
+/* ----------------------------- */
+
+.checkin-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.checkin-box {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+}
+
+.checkin-box h1 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.checkin-form {
+    margin-top: 20px;
+}
+
+.checkin-form label {
+    display: block;
+    text-align: left;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.checkin-form input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.checkin-form button[type="submit"] {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.checkin-form button[type="submit"]:hover {
+    background: #2980b9;
+}
+
+.checkin-message {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    background: #d4edda;
+    color: #155724;
+}
+
+.checkin-error {
+    color: #e74c3c;
+    margin-bottom: 15px;
     font-weight: 500;
 }
 
-/* Manual Check-ins */
+/* ----------------------------- */
+/* Pending Check-ins Page Styles */
+/* ----------------------------- */
+
+.pending-container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.pending-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.checkin-list {
+    margin-top: 20px;
+}
+
 .checkin-item {
     padding: 15px;
     border: 1px solid #e0e0e0;
@@ -497,13 +614,18 @@ body.attendance-page {
     background: #f9f9f9;
 }
 
-.actions {
+.checkin-item strong {
+    color: #2c3e50;
+}
+
+.checkin-actions {
     margin-top: 10px;
     display: flex;
     gap: 10px;
 }
 
-.actions a {
+.checkin-actions a {
+    display: inline-block;
     padding: 8px 15px;
     border-radius: 6px;
     text-decoration: none;
@@ -511,25 +633,65 @@ body.attendance-page {
     transition: all 0.3s ease;
 }
 
-.actions .approve {
+.approve-btn {
     background: #27ae60;
     color: white;
 }
 
-.actions .approve:hover {
+.approve-btn:hover {
     background: #219653;
 }
 
-.actions .reject {
+.reject-btn {
     background: #e74c3c;
     color: white;
 }
 
-.actions .reject:hover {
+.reject-btn:hover {
     background: #c0392b;
 }
 
-/* Responsive */
+.no-pending {
+    color: #7f8c8d;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+/* ----------------------------- */
+/* Error Page Styles */
+/* ----------------------------- */
+
+.error-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    border-radius: 15px;
+    max-width: 600px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    color: white;
+}
+
+.error-container h1 {
+    font-size: 5rem;
+    margin-bottom: 20px;
+}
+
+.error-container a {
+    color: #f1c40f;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.error-container a:hover {
+    text-decoration: underline;
+}
+
+/* ----------------------------- */
+/* Responsive Styles */
+/* ----------------------------- */
+
 @media (max-width: 768px) {
     .sidebar {
         width: 280px;
@@ -548,10 +710,6 @@ body.attendance-page {
         flex-direction: column;
         align-items: flex-start;
     }
-    .course-selection {
-        width: 100%;
-        margin-top: 15px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -562,14 +720,6 @@ body.attendance-page {
 
     .subject-card {
         padding: 15px;
-    }
-
-    .content-section {
-        display: none;
-    }
-
-    .content-section.active {
-        display: block;
     }
 
     .login-box {
@@ -585,18 +735,17 @@ body.attendance-page {
         padding: 10px 16px;
         font-size: 14px;
     }
-
-    .flash-messages {
-        margin: 1rem 0;
-    }
 }
+
+/* ----------------------------- */
+/* Flash Messages */
+/* ----------------------------- */
 
 .flash-messages {
     margin: 1.5rem 0;
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .flash-message {
@@ -625,15 +774,6 @@ body.attendance-page {
     border: 1px solid #2e7d32;
 }
 
-/* Optional icon styles */
-.flash-message svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    fill: currentColor;
-}
-
-/* Fade-in animation */
 @keyframes fadeIn {
     to {
         opacity: 1;

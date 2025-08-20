@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Dashboard - DPFinal</title>
+    <title>Presence - DPFinal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
@@ -17,13 +17,13 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li>
-                        <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                        <a href="{{ url_for('dashboard') }}" class="nav-item">
                             <span class="nav-icon">📚</span>
                             <span class="nav-text">Courses</span>
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('presence') }}" class="nav-item">
+                        <a href="{{ url_for('presence') }}" class="nav-item active">
                             <span class="nav-icon">📊</span>
                             <span class="nav-text">Presence</span>
                         </a>
@@ -53,31 +53,38 @@
             <button class="menu-btn" id="menuBtn">
                 <span></span><span></span><span></span>
             </button>
-            <h1>Courses</h1>
+            <h1>Presence</h1>
         </header>
 
         <div class="content-area">
-            <!-- Courses Content -->
-            <section id="courses-section" class="content-section active">
+            <!-- Presence Content -->
+            <section id="presence-section" class="content-section active">
                 <div class="section-header">
-                    <h2>📚 Courses</h2>
-                    <p>View and manage your courses</p>
+                    <h2>📊 Presence</h2>
+                    <p>Generate QR codes for attendance</p>
                 </div>
 
-                <div id="coursesContent">
-                    {% for year, courses in courses_by_year.items() %}
-                    <div class="year-section">
-                        <h3 class="year-title">{{ year }}</h3>
-                        <div class="subjects-grid">
-                            {% for id, name in courses.items() %}
-                            <div class="subject-card {% if year == 'Electives' %}elective{% endif %}">
-                                <h4>{{ name }}</h4>
-                                <a href="{{ url_for('course_attendance', course_id=id) }}" class="check-btn">View Attendance</a>
-                            </div>
-                            {% endfor %}
+                <div id="presenceContent">
+                    <div class="qr-generation">
+                        <h3>Generate QR Code for Attendance</h3>
+                        <form id="qrForm">
+                            <label for="courseSelect">Select Course:</label>
+                            <select id="courseSelect" name="course_id">
+                                {% for id, name in courses.items() %}
+                                    <option value="{{ id }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <label for="masterKey">Enter Master Key:</label>
+                            <input type="password" id="masterKey" name="master_key" required />
+
+                            <button type="submit">Generate QR</button>
+                        </form>
+
+                        <div id="qrCodeContainer">
+                            <img id="qrCodeImage" src="" alt="QR Code" />
                         </div>
                     </div>
-                    {% endfor %}
                 </div>
             </section>
         </div>
@@ -103,6 +110,23 @@
         sidebarOverlay.addEventListener('click', () => {
             sidebar.classList.remove('active');
             sidebarOverlay.classList.remove('active');
+        });
+
+        // QR code form submission handler
+        document.getElementById('qrForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const courseId = document.getElementById('courseSelect').value;
+            const masterKey = document.getElementById('masterKey').value;
+            const qrImage = document.getElementById('qrCodeImage');
+
+            qrImage.src = `/generate_qr/${courseId}?key=${encodeURIComponent(masterKey)}`;
+            qrImage.style.display = 'block';
+        });
+
+        // QR code image error handler
+        document.getElementById('qrCodeImage').addEventListener('error', function() {
+            alert('Failed to load QR code. Please try again.');
+            this.style.display = 'none';
         });
     </script>
 </body>

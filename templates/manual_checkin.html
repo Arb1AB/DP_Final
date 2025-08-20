@@ -3,108 +3,40 @@
 <head>
     <title>Check-in - {{ course_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .checkin-box {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 500px;
-            text-align: center;
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        form {
-            margin-top: 20px;
-        }
-        label {
-            display: block;
-            text-align: left;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        button[type="submit"] {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        button[type="submit"]:hover {
-            background: #2980b9;
-        }
-        .message {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            font-weight: 500;
-            background: #d4edda;
-            color: #155724;
-        }
-        .error {
-            color: #e74c3c;
-            margin-bottom: 15px;
-            font-weight: 500;
-        }
-    </style>
 </head>
 <body>
-    <div class="checkin-box">
-        <h1>Check-in for {{ course_name }}</h1>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul>
-                    {% for category, message in messages %}
-                        <li class="error">{{ message }}</li>
-                    {% endfor %}
-                </ul>
+    <div class="checkin-container">
+        <div class="checkin-box">
+            <h1>Check-in for {{ course_name }}</h1>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul>
+                        {% for category, message in messages %}
+                            <li class="checkin-error">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            
+            {% if not success %}
+            <form class="checkin-form" method="POST">
+                <label>First Name:</label>
+                <input type="text" name="student_name" required>
+                
+                <label>Last Name:</label>
+                <input type="text" name="student_surname" required>
+                
+                <label>Student ID:</label>
+                <input type="text" name="student_id" required>
+                
+                <button type="submit">Check-in</button>
+            </form>
+            {% else %}
+            <div class="checkin-message">
+                ✅ Your presence has been recorded and is pending professor approval.
+            </div>
             {% endif %}
-        {% endwith %}
-        
-        {% if not success %}
-        <form method="POST">
-            <label>First Name:</label>
-            <input type="text" name="student_name" required>
-            
-            <label>Last Name:</label>
-            <input type="text" name="student_surname" required>
-            
-            <label>Student ID:</label>
-            <input type="text" name="student_id" required>
-            
-            <button type="submit">Check-in</button>
-        </form>
-        {% else %}
-        <div class="message">
-            ✅ Your presence has been recorded and is pending professor approval.
         </div>
-        {% endif %}
     </div>
 </body>
 </html>

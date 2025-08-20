@@ -1,104 +1,107 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Pending Check-ins - {{ course_name }}</title>
+    <title>Pending Check-ins</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #3498db;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        .checkin-list {
-            margin-top: 20px;
-        }
-        .checkin-item {
-            padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            background: #f9f9f9;
-        }
-        .checkin-item strong {
-            color: #2c3e50;
-        }
-        .actions {
-            margin-top: 10px;
-        }
-        .actions a {
-            display: inline-block;
-            padding: 8px 15px;
-            border-radius: 6px;
-            text-decoration: none;
-            margin-right: 10px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .approve {
-            background: #27ae60;
-            color: white;
-        }
-        .approve:hover {
-            background: #219653;
-        }
-        .reject {
-            background: #e74c3c;
-            color: white;
-        }
-        .reject:hover {
-            background: #c0392b;
-        }
-        .no-pending {
-            color: #7f8c8d;
-            font-style: italic;
-            padding: 20px;
-            text-align: center;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <a href="{{ url_for('professor_dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
-        <h1>Pending Manual Check-ins for {{ course_name }}</h1>
-        
-        {% if pending %}
-            <div class="checkin-list">
-                {% for checkin in pending %}
-                    <div class="checkin-item">
-                        <strong>{{ checkin[1] }} {{ checkin[2] }}</strong> (ID: {{ checkin[3] }})<br>
-                        Checked in at: {{ checkin[4] }}
-                        <div class="actions">
-                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}" class="approve">✅ Approve</a>
-                            <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}" class="reject">❌ Reject</a>
-                        </div>
-                    </div>
-                {% endfor %}
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>DPFinal</h2>
+            <button class="close-btn" id="closeSidebar">&times;</button>
+        </div>
+        <div class="sidebar-content">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('dashboard') }}" class="nav-item">
+                            <span class="nav-icon">📚</span>
+                            <span class="nav-text">Courses</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('presence') }}" class="nav-item">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Presence</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('manual_checkins') }}" class="nav-item active">
+                            <span class="nav-icon">✅</span>
+                            <span class="nav-text">Pending Check-ins</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <p><strong>{{ user.name }}</strong></p>
+                <p class="user-email">{{ user.email }}</p>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
             </div>
-        {% else %}
-            <p class="no-pending">No pending check-ins for this course.</p>
-        {% endif %}
+        </div>
     </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="main-content">
+        <header class="top-header">
+            <button class="menu-btn" id="menuBtn">
+                <span></span><span></span><span></span>
+            </button>
+            <h1>Pending Check-ins</h1>
+        </header>
+
+        <div class="content-area">
+            <div class="pending-container">
+                <div class="pending-header">
+                    <h2>Pending Manual Check-ins</h2>
+                </div>
+                
+                {% if pending %}
+                    <div class="checkin-list">
+                        {% for checkin in pending %}
+                            <div class="checkin-item">
+                                <strong>{{ checkin[2] }} {{ checkin[3] }}</strong> (ID: {{ checkin[4] }})<br>
+                                Course: {{ courses.get(checkin[1], "Unknown") }}<br>
+                                Checked in at: {{ checkin[5] }}
+                                <div class="checkin-actions">
+                                    <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='approve') }}" class="approve-btn">✅ Approve</a>
+                                    <a href="{{ url_for('manual_checkin_action', checkin_id=checkin[0], action='reject') }}" class="reject-btn">❌ Reject</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="no-pending">No pending check-ins.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar toggle handlers
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const closeSidebarBtn = document.getElementById('closeSidebar');
+        const menuBtn = document.getElementById('menuBtn');
+
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        });
+
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    </script>
 </body>
 </html>
