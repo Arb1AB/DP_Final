@@ -779,3 +779,16 @@ body {
         opacity: 1;
     }
 }
+
+.manual-checkin-btn {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+}
+.manual-checkin-btn:hover {
+    background-color: #0056b3;
+}

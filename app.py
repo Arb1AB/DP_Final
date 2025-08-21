@@ -348,8 +348,14 @@ def checkin_manual(course_id):
     if course_id not in all_courses:
         return "Invalid course ID", 400
 
-    success = False
+    # STEP 1: Choice screen – first visit, no action yet
+    if request.method == 'GET' and 'action' not in request.args:
+        return render_template('manual_checkin.html',
+                               course_name=all_courses[course_id],
+                               course_id=course_id,
+                               step="choose")
 
+    # STEP 2: Manual form submission
     if request.method == 'POST':
         student_name = request.form.get('student_name')
         student_surname = request.form.get('student_surname')
@@ -369,19 +375,20 @@ def checkin_manual(course_id):
         add_manual_checkin(course_id, student_name, student_surname, student_id, now.strftime('%Y-%m-%d %H:%M:%S'))
 
         session['last_manual_checkin'] = {'student_id': student_id, 'course_id': course_id}
-        success = True
+        return redirect(url_for('checkin_manual', course_id=course_id, action="manual"))
 
+    # STEP 3: Show success after form submission
     last = session.get('last_manual_checkin')
-    if last and last.get('course_id') == course_id:
-        success = True
-    else:
-        success = False
+    success = last and last.get('course_id') == course_id
+    if not success:
         session.pop('last_manual_checkin', None)
 
-    return render_template('manual_checkin.html', 
-                           course_name=all_courses[course_id], 
+    return render_template('manual_checkin.html',
+                           course_name=all_courses[course_id],
                            course_id=course_id,
+                           step="manual_form",
                            success=success)
+
 
 # ========================
 # QR CODE & APPROVAL ROUTES

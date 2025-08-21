@@ -8,33 +8,47 @@
     <div class="checkin-container">
         <div class="checkin-box">
             <h1>Check-in for {{ course_name }}</h1>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <ul>
-                        {% for category, message in messages %}
-                            <li class="checkin-error">{{ message }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            {% endwith %}
+
+            {% if step == "choose" %}
+                <!-- STEP 1: Choose method -->
+                <p>Please choose how you want to check in:</p>
+                <div style="margin-top: 20px;">
+                    <a href="{{ url_for('google_login', course_id=course_id) }}" class="google-login-btn">🔒 Log in with Google & Check-In</a>
+                </div>
+                <div style="margin-top: 10px;">
+                    <a href="{{ url_for('checkin_manual', course_id=course_id, action='manual') }}" class="manual-checkin-btn">📝 Continue to Manual Check-In</a>
+                </div>
             
-            {% if not success %}
-            <form class="checkin-form" method="POST">
-                <label>First Name:</label>
-                <input type="text" name="student_name" required>
-                
-                <label>Last Name:</label>
-                <input type="text" name="student_surname" required>
-                
-                <label>Student ID:</label>
-                <input type="text" name="student_id" required>
-                
-                <button type="submit">Check-in</button>
-            </form>
-            {% else %}
-            <div class="checkin-message">
-                ✅ Your presence has been recorded and is pending professor approval.
-            </div>
+            {% elif step == "manual_form" %}
+                <!-- STEP 2 or 3: Manual check-in form or success -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul>
+                            {% for category, message in messages %}
+                                <li class="checkin-error">{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
+
+                {% if not success %}
+                <form class="checkin-form" method="POST">
+                    <label>First Name:</label>
+                    <input type="text" name="student_name" required>
+                    
+                    <label>Last Name:</label>
+                    <input type="text" name="student_surname" required>
+                    
+                    <label>Student ID:</label>
+                    <input type="text" name="student_id" required>
+                    
+                    <button type="submit">Check-in</button>
+                </form>
+                {% else %}
+                <div class="checkin-message">
+                    ✅ Your presence has been recorded and is pending professor approval.
+                </div>
+                {% endif %}
             {% endif %}
         </div>
     </div>
